@@ -15,8 +15,10 @@ function _init()
   mode=modes.title_screen
   score=0
   run=0
+  last_mouse=0
   cartdata("tobiasvl_patrick")
   init_board()
+  poke(0x5f2d,1)
 end
 
 keys={
@@ -28,6 +30,10 @@ keys={
 
 function _update()
   local button=btnp()
+  local mouse=stat(34)==1
+  local temp_mouse=mouse
+  mouse=mouse!=last_mouse and mouse or false
+  last_mouse=temp_mouse
   if mode==modes.title_screen then
     if (button==0x10) init_board() mode=modes.play
   elseif mode==modes.play then
@@ -37,18 +43,25 @@ function _update()
     elseif get_tile(patrick.x-1,patrick.y)==-1 and get_tile(patrick.x+1,patrick.y)==-1 and get_tile(patrick.x-1,patrick.y-1)==-1 and get_tile(patrick.x,patrick.y-1)==-1 and get_tile(patrick.x+1,patrick.y-1)==-1 and get_tile(patrick.x-1,patrick.y+1)==-1 and get_tile(patrick.x,patrick.y+1)==-1 and get_tile(patrick.x+1,patrick.y+1)==-1 then
       mode=modes.game_over
     end
-    local new_highlight={}
+    new_highlight={}
     new_highlight.x,new_highlight.y=highlight.x,highlight.y
-    for mask in all({1,2,4,8}) do
-      if band(button,mask)!=0 then
-        new_highlight.x,new_highlight.y=keys[mask](new_highlight.x,new_highlight.y)
+    if button!=0 then
+      for mask in all({1,2,4,8}) do
+        if band(button,mask)!=0 then
+          new_highlight.x,new_highlight.y=keys[mask](new_highlight.x,new_highlight.y)
+        end
       end
+    else
+      local x,y=ceil(stat(32)/18),ceil((stat(33)-10)/18)
+      new_highlight.x=(x==patrick.x-1 or x==patrick.x or x==patrick.x+1) and x or 0
+      new_highlight.y=(y==patrick.y-1 or y==patrick.y or y==patrick.y+1) and y or 0
     end
     if get_tile(new_highlight.x,new_highlight.y)>=0 then
       highlight=new_highlight
     end
-    if button==0x10 and not (highlight.x==patrick.x and highlight.y==patrick.y) then
+    if (button==0x10 or mouse) and not (highlight.x==patrick.x and highlight.y==patrick.y) then
       steps+=1
+      mouse=false
       destroy_tile(patrick.x,patrick.y)
       patrick.x,patrick.y=highlight.x,highlight.y
       local tile=get_tile(highlight.x,highlight.y)
@@ -77,20 +90,22 @@ function _update()
       end
     end
   elseif mode==modes.win then
-    if btnp(4) then
+    if btnp(4) or mouse then
       score+=60-steps
       run+=1
       if (score>high_score) dset(1,score) dset(2,run)
       init_board()
       mode=modes.play
+      mouse=false
     end
   elseif mode==modes.game_over then
-    if btnp(4) then
+    if btnp(4) or mouse then
       score=max(0,score-60+steps)
       run+=1
       if (score>high_score) dset(1,score) dset(2,run)
       init_board()
       mode=modes.play
+      mouse=false
     end
   end
 end
@@ -106,7 +121,7 @@ function _draw()
     cursor(0,100)
     center("high score: "..high_score,7)
     center("(over "..high_run.." levels)",7)
-  elseif mode==modes.play then
+  elseif mode==modes.play or mode==modes.win or mode==modes.game_over then
     cls()
     local x=0
     print(balls[1][2],x,0,balls[1][1])
@@ -161,12 +176,18 @@ function _draw()
     spr(9,100,108,2,2)
     spr(32,114,94,2,2)
     spr(13,114,108,2,2)
-  elseif mode==modes.win then
+    spr(36,stat(32),stat(33))
+  end
+  if mode==modes.win then
     print("z: next",128-(7*4),0,7)
     print("score "..score,0,94,5)
     print("win  +"..60-steps,0,100,11)
     print("score="..score+(60-steps),0,114,7)
   elseif mode==modes.game_over then
+    print("z: next",128-(7*4),0,7)
+    print("score "..score,0,94,5)
+    print("lose -"..60+steps,0,106,8)
+    print("score="..max(0,score-(60+steps)),0,114,7)
     if patrick.x==1 then
       spr(34,(18*(patrick.x-2))+32,10+(18*(patrick.y-2))+9,2,2,true)
       print("oh\nno",(18*(patrick.x-2))+36,10+(18*(patrick.y-2))+10,0)
@@ -174,10 +195,6 @@ function _draw()
       spr(34,(18*(patrick.x-2))+9,10+(18*(patrick.y-2))+9,2,2)
       print("oh\nno",(18*(patrick.x-2))+13,10+(18*(patrick.y-2))+10,0)
     end
-    print("z: next",128-(7*4),0,7)
-    print("score "..score,0,94,5)
-    print("lose -"..60+steps,0,106,8)
-    print("score="..max(0,score-(60+steps)),0,114,7)
   end
 end
 
@@ -259,13 +276,13 @@ __gfx__
 00000000655655555555655663363333333363360000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000666655666655666666663366663366660000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000666655666655666666663366663366660000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-77777777777770000777777777777770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-70007000700070007777777777777777000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-70007000700070007777777777777777000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-70007000700070007777777777777777000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-77777777777770007777777777777777000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-76667999766670007777777777777777000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-76667999766670007777777777777777000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+77777777777770000777777777777770300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+70007000700070007777777777777777330000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+70007000700070007777777777777777333000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+70007000700070007777777777777777333300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+77777777777770007777777777777777333330000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+76667999766670007777777777777777333000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+76667999766670007777777777777777300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 76667999766670007777777777777777000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 77777777777770007777777777777777000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 70007000700070007777777777777777000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
