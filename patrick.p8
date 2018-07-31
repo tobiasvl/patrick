@@ -24,12 +24,14 @@ function _init()
   title_y=50
   title_dir=true
   emulated=stat(102)!=0
+  story_scroll=127
+  kill=false
 end
 
 menu={
   function() init_board() mode=modes.play end,
   function() init_board(true) page=1 mode=modes.tutorial end,
-  function() mode=modes.story end,
+  function() init_board() story_scroll=127 mode=modes.story end,
 }
 
 keys={
@@ -39,17 +41,27 @@ keys={
   [8]=function(x,y) return x,y<4 and y<patrick.y+1 and y+1 or y end,
 }
 
+-- kill screen
+kls=cls
+function cls()
+  if (not kill) kls()
+end
+
 function _update()
+  if (run>127) kill=true
   local button=btnp()
   local mouse=stat(34)==1
   local temp_mouse=mouse
   mouse=mouse!=last_mouse and mouse or false
   last_mouse=temp_mouse
   if mode==modes.title_screen then
+    menuitem(1)
     if (button==4) menu_selection=menu_selection==1 and #menu or menu_selection-1
     if (button==8) menu_selection=(menu_selection%#menu)+1
     if (button==0x10) menu[menu_selection]()
+    if (button==0x20) kill=true --todo debug
   elseif mode==modes.play then
+    menuitem(1,"title screen",function() mode=modes.title_screen end)
     if (button==0x20 and destroyed==0) init_board()
     if destroyed==27 then
       mode=modes.win
@@ -121,6 +133,7 @@ function _update()
       mouse=false
     end
   elseif mode==modes.tutorial then
+    menuitem(1,"title screen",function() mode=modes.title_screen end)
     if btnp(4) or mouse then
       page+=1
       if (page==6) init_board()
@@ -145,6 +158,21 @@ function _update()
           end
         end
         if (should_break) break
+      end
+    end
+  elseif mode==modes.story then
+    menuitem(1,"title screen",function() mode=modes.title_screen end)
+    if btn(2) then
+      story_scroll-=1
+    elseif btn(3) then
+      story_scroll+=1
+    elseif btnp(4) or btnp(5) then
+      mode=modes.title_screen
+    else
+      if not kill then
+        story_scroll-=0.2
+      else
+        if (story_scroll>-364) story_scroll-=1
       end
     end
   end
@@ -182,7 +210,6 @@ function _draw()
     center("high score: "..high_score,7)
     center("(over "..high_run.." levels)",7)
   elseif mode==modes.tutorial then
-    menuitem(1,"title screen",function() mode=modes.title_screen end)
     cls()
     print("z: next",128-(7*4),0,7)
     local offset=10
@@ -317,11 +344,11 @@ function _draw()
         if tile>=0 then
           rect(18*(x-1),offset+(18*(y-1)),18*(x),offset+(18*(y)),14)
           local bg=2
-          if ((x==patrick.x-1 or x==patrick.x or x==patrick.x+1) and (y==patrick.y-1 or y==patrick.y or y==patrick.y+1)) bg=5
+          if (not kill and (x==patrick.x-1 or x==patrick.x or x==patrick.x+1) and (y==patrick.y-1 or y==patrick.y or y==patrick.y+1)) bg=5
           if (patrick.x==x and patrick.y==y) bg=0
           if (highlight.x==x and highlight.y==y) bg=6
           local highlighted_tile=get_tile(highlight.x,highlight.y)
-          if highlighted_tile>0 then
+          if not kill and highlighted_tile>0 then
             if highlighted_tile==10 or highlighted_tile==9 then
               if (y==highlight.y-1 and (x==highlight.x-1 or x==highlight.x or x==highlight.x+1)) bg=0
             end
@@ -342,9 +369,16 @@ function _draw()
     end
     palt(0,false)
     palt(6,true)
-    spr(1,(18*(patrick.x-1))+2,offset+(18*(patrick.y-1))+2,2,2)
+    local sprite=1
+    if kill then
+      local foo=run%balls[1][2]
+      if (foo==3) sprite=3
+      if (foo==5) sprite=39
+      if (foo==7) sprite=41
+    end
+    spr(sprite,(18*(patrick.x-1))+2,offset+(18*(patrick.y-1))+2,2,2)
     palt()
-    print("level "..run+1,0,88,7)
+    print("level"..(kill and "-" or " ")..run+1,0,88,7)
     print("score "..score,0,94,7)
     print("win  +"..60-steps,0,100,5)
     print("lose -"..60+steps,0,106,5)
@@ -369,9 +403,95 @@ function _draw()
     print("lose -"..60+steps,0,106,8)
     print("score="..max(0,score-(60+steps)),0,114,7)
     oh_no()
+  elseif mode==modes.story then
+    if (kill) cls(5) else cls()
+    story={
+      "it is the year 2077.",
+      "",
+      "the evil ernie york, former",
+      "electronic store owner and",
+      "cryogenics innovator, now",
+      "mutated multibillionaire ceo of",
+      "the sinister zebra corporation,",
+      "rules fun land with his army of",
+      "advanced robots - beings dis-",
+      "similar to humans - known as",
+      "tomb bots",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "the immortal spirit of the",
+      "leprechaun patrick magee - now",
+      "clad in sunglasses and a black",
+      "coat - is the last vestige of",
+      "the jackie gleason appreciation",
+      "society, an ancient underground",
+      "rebel alliance.",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "now patrick must traverse and",
+      "dismantle the mazes of szc's",
+      "virtual reality system to shut",
+      "down the tomb bot factories.",
+      "hindering his quest are digital",
+      "versions of the szc's neon",
+      "\"shine 'n glow\" energy balls;",
+      "but perhaps they can help too?",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "are you ready for the challenge?",
+    }
+    local scroll_offset=0
+    if kill then
+      cursor(0,story_scroll)
+    else
+      spr(39,56,12*6+story_scroll,2,2)
+      palt(0,false)
+      palt(6,true)
+      spr(story_scroll<-50 and 1 or 3,56,24*6+story_scroll,2,2)
+      palt()
+      local ball_x=40
+      for ball in all(balls) do
+        if ball[1]!=7 then
+          circfill(ball_x,38*6+story_scroll,4,ball[1])
+          ball_x+=10
+        end
+      end
+      if (story_scroll<-300) local str="press z" print(str,64-(#str*2),64,7)
+    end
+    for str in all(story) do
+      if (scroll_offset==6*10) color(8) else color(7)
+      if not kill then
+        print(str,64-(#str*2),story_scroll+scroll_offset)
+        local x,y=flr(rnd(127)),flr(rnd(127))
+        line(x,y,x-3,y-3,7)
+      else
+        if (story_scroll<-300) cls=kls
+        if (str!="") center(str)
+        palt(0,false)
+        palt(6,true)
+        spr(41,story_scroll+427,40,2,2)
+        spr(43,story_scroll+427,40+16,2,1)
+        spr(story_scroll%12!=0 and 59 or 45,story_scroll+427,40+24)
+        spr(story_scroll%10!=0 and 60 or 61,story_scroll+427+8,40+24)
+        palt()
+        if (story_scroll==-364) spr(36,54,25,3,2,true) print("where\nam i?",56,26,0)
+      end
+      scroll_offset+=6
+    end
   end
   if page==12 and run==0 then
     print("good\nluck",50,94,11)
+  elseif kill and run==130 then
+    print(" kill\nscreen",44,94,8)
   end
 end
 
@@ -475,19 +595,19 @@ __gfx__
 33300000655655555555655663363333333363360000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 30000000666655666655666666663366663366660000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000666655666655666666663366663366660000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeee0000777777777777770077777777777777777777770000000000000000000000000000000000000000000000000000000000000000000000000
-e000e000e000e0007777777777777777777777777777777777777777000000000000000000000000000000000000000000000000000000000000000000000000
-e000e000e000e0007777777777777777777777777777777777777777000000000000000000000000000000000000000000000000000000000000000000000000
-e000e000e000e0007777777777777777777777777777777777777777000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeee0007777777777777777777777777777777777777777000000000000000000000000000000000000000000000000000000000000000000000000
-e222e999e222e0007777777777777777777777777777777777777777000000000000000000000000000000000000000000000000000000000000000000000000
-e222e999e222e0007777777777777777777777777777777777777777000000000000000000000000000000000000000000000000000000000000000000000000
-e222e999e222e0007777777777777777777777777777777777777777000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeee0007777777777777777777777777777777777777777000000000000000000000000000000000000000000000000000000000000000000000000
-e000e000e000e0007777777777777777777777777777777777777777000000000000000000000000000000000000000000000000000000000000000000000000
-e000e000e000e0007777777777777777777777777777777777777777000000000000000000000000000000000000000000000000000000000000000000000000
-e000e000e000e0007777777777777777777777777777777777777777000000000000000000000000000000000000000000000000000000000000000000000000
-eeeeeeeeeeeee0000777777777777770077777777777777777777770000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000777000000000000000000000077700000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000077000000000000000000000077000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000007700000000000000000000770000000000000000000000000000000000000000000000000000000000000000000000000000
+eeeeeeeeeeeee000077777777777777007777777777777777777777000007777777700006666666676666666666667777777766666aa67770000000000000000
+e000e000e000e0007777777777777777777777777777777777777777000777777777700066666667776666666666777777777766666667770000000000000000
+e000e000e000e0007777777777777777777777777777777777777777007788777788770066666677777666666667777777777776666667770000000000000000
+e000e000e000e0007777777777777777777777777777777777777777007788737788770066666777877766666677777787777777666688880000000000000000
+eeeeeeeeeeeee0007777777777777777777777777777777777777777007777333777770066667777777776666677777777777777666688880000000000000000
+e222e999e222e0007777777777777777777777777777777777777777007777737777770066677777877777666677677777777677666688880000000000000000
+e222e999e222e0007777777777777777777777777777777777777777007777777777770066777777777777766677677787777677666666660000000000000000
+e222e999e222e00077777777777777777777777777777777777777770007788888877000660000000000000666aa6777777776aa666666660000000000000000
+eeeeeeeeeeeee00077777777777777777777777777777777777777770000777777770000660aaaaaaaaaaa0666aa6777777776aa777776aa0000000000000000
+e000e000e000e0007777777777777777777777777777777777777777000008811880000066a00000000000a66666677787777666877776660000000000000000
+e000e000e000e0007777777777777777777777777777777777777777000088811888000066aa000aaa000aa66666677777777666777776660000000000000000
+e000e000e000e00077777777777777777777777777777777777777770007788118877000666a000aaa000a666666677777777666778888660000000000000000
+eeeeeeeeeeeee00007777777777777700777777777777777777777700007788118877000666aaaa00aaaaa666666677766777666668888660000000000000000
+000000000000000000000000007770000000000000000000000777000000111111110000666aaaaaaaaaaa666666677766777666666666660000000000000000
+0000000000000000000000000007700000000000000000000007700000008800008800006666aaa888aaa6666666888866888866666666660000000000000000
+000000000000000000000000000077000000000000000000007700000008880000888000666666aaaaaa66666666888866888866666666660000000000000000
