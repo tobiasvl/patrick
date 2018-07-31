@@ -11,6 +11,10 @@ modes={
   game_over=4,
   tutorial=5,
   story=6,
+  custom=7,
+  custom_play=8,
+  win_custom=9,
+  game_over_custom=10,
 }
 
 function _init()
@@ -26,7 +30,7 @@ function _init()
   emulated=stat(102)!=0
   story_scroll=127
   kill=false
-  mouse_pointer=16
+  mouse_pointer=0
 end
 
 menu={
@@ -62,13 +66,13 @@ function _update()
     if (button==8) menu_selection=(menu_selection%#menu)+1
     if (button==0x10) menu[menu_selection]()
     if (button==0x20) kill=true --todo debug
-  elseif mode==modes.play then
+  elseif mode==modes.play or mode==modes.custom_play then
     menuitem(1,"title screen",function() mode=modes.title_screen end)
-    if (button==0x20 and destroyed==0) init_board()
+    if (mode==modes.play and button==0x20 and destroyed==0) init_board()
     if destroyed==27 then
-      mode=modes.win
+      mode=mode==modes.play and modes.win or modes.win_custom
     elseif get_tile(patrick.x-1,patrick.y)==-1 and get_tile(patrick.x+1,patrick.y)==-1 and get_tile(patrick.x-1,patrick.y-1)==-1 and get_tile(patrick.x,patrick.y-1)==-1 and get_tile(patrick.x+1,patrick.y-1)==-1 and get_tile(patrick.x-1,patrick.y+1)==-1 and get_tile(patrick.x,patrick.y+1)==-1 and get_tile(patrick.x+1,patrick.y+1)==-1 then
-      mode=modes.game_over
+      mode=mode==modes.play and modes.game_over or modes.game_over_custom
     end
     new_highlight={}
     new_highlight.x,new_highlight.y=highlight.x,highlight.y
@@ -93,22 +97,22 @@ function _update()
       patrick.x,patrick.y=highlight.x,highlight.y
       local tile=get_tile(highlight.x,highlight.y)
       if tile>0 then
-        if tile==10 or tile==9 then
+        if tile==7 or tile==2 then
           destroy_tile(highlight.x-1,highlight.y-1)
           destroy_tile(highlight.x,highlight.y-1)
           destroy_tile(highlight.x+1,highlight.y-1)
         end
-        if tile==8 or tile==9 then
+        if tile==3 or tile==2 then
           destroy_tile(highlight.x-1,highlight.y+1)
           destroy_tile(highlight.x,highlight.y+1)
           destroy_tile(highlight.x+1,highlight.y+1)
         end
-        if tile==11 or tile==1 then
+        if tile==4 or tile==5 then
           destroy_tile(highlight.x-1,highlight.y-1)
           destroy_tile(highlight.x-1,highlight.y)
           destroy_tile(highlight.x-1,highlight.y+1)
         end
-        if tile==12 or tile==1 then
+        if tile==6 or tile==5 then
           destroy_tile(highlight.x+1,highlight.y-1)
           destroy_tile(highlight.x+1,highlight.y)
           destroy_tile(highlight.x+1,highlight.y+1)
@@ -132,6 +136,14 @@ function _update()
       if (score>high_score) dset(1,score) dset(2,run)
       init_board()
       mode=modes.play
+      mouse=false
+    end
+  elseif mode==modes.win_custom or mode==modes.game_over_custom then
+    if btnp(4) or mouse then
+      board=backup.board
+      patrick=backup.patrick
+      balls=backup.balls
+      mode=modes.custom
       mouse=false
     end
   elseif mode==modes.tutorial then
@@ -179,57 +191,74 @@ function _update()
     end
   elseif mode==modes.custom then
     menuitem(1,"title screen",function() mode=modes.title_screen end)
+    if patrick.x>0 and btnp(4) then
+      highlight.x,highlight.y=patrick.x,patrick.y
+      mode=modes.custom_play
+      steps=0
+      destroyed=0
+      backup={}
+      backup.board,backup.balls,backup.patrick={},{},{}
+      backup.patrick.x,backup.patrick.y=patrick.x,patrick.y
+      for y=1,4 do
+        backup.board[y]={}
+        for x=1,7 do
+          backup.board[y][x]=board[y][x]
+        end
+      end
+      for i=1,7 do
+        backup.balls[i]={}
+        backup.balls[i].id=balls[i].id
+        backup.balls[i].color=balls[i].color
+        backup.balls[i].pos=balls[i].pos
+      end
+    end
     if mouse then
       local x,y=stat(32),stat(33)
       cell_x,cell_y=ceil(x/18),ceil((y-10)/18)
-      if patrick.x==-1 and x>=0 and x<=15 and y>=94 and y<=110 then
+      -- slippe
+      if mouse_pointer!=0 and get_tile(cell_x,cell_y)==-1 then
+        mouse_pointer=0
+      -- plukk opp patrick fra tray og brett
+      elseif patrick.x==-1 and x>=0 and x<=15 and y>=94 and y<=110 then
         mouse_pointer=1
       elseif patrick.x==cell_x and patrick.y==cell_y then
         patrick={x=-1,y=-1}
-        balls[1][2]=0
+        balls[1].pos=0
         mouse_pointer=1
-      elseif balls[2][2]==0 and x>=16 and x<=24 and y>=94 and y<=102 then
+      -- plukk opp ball fra tray
+      elseif balls[2].pos==0 and x>=16 and x<=24 and y>=94 and y<=102 then
         mouse_pointer=2
-      elseif balls[3][2]==0 and x>=26 and x<=34 and y>=94 and y<=102 then
+      elseif balls[3].pos==0 and x>=26 and x<=34 and y>=94 and y<=102 then
         mouse_pointer=3
-      elseif balls[4][2]==0 and x>=36 and x<=44 and y>=94 and y<=102 then
+      elseif balls[4].pos==0 and x>=36 and x<=44 and y>=94 and y<=102 then
         mouse_pointer=4
-      elseif balls[5][2]==0 and x>=16 and x<=24 and y>=104 and y<=112 then
+      elseif balls[5].pos==0 and x>=16 and x<=24 and y>=104 and y<=112 then
         mouse_pointer=5
-      elseif balls[6][2]==0 and x>=26 and x<=34 and y>=104 and y<=112 then
+      elseif balls[6].pos==0 and x>=26 and x<=34 and y>=104 and y<=112 then
         mouse_pointer=6
-      elseif balls[7][2]==0 and x>=36 and x<=44 and y>=104 and y<=112 then
+      elseif balls[7].pos==0 and x>=36 and x<=44 and y>=104 and y<=112 then
         mouse_pointer=7
-      else
-        local tile=get_tile(cell_x,cell_y)
-        if tile!=-1 then
-          if balls[mouse_pointer] then
-            if mouse_pointer==1 then
-              patrick.x,patrick.y=cell_x,cell_y
-            else
-              for i=2,7 do
-                if tile==balls[i][1] then
-                  board[cell_y][cell_x]=balls[mouse_pointer][1]
-                  balls[i][2]=0
-                  mouse_pointer=i
-                  break
-                end
-              end
-            end
-            balls[mouse_pointer]={balls[mouse_pointer][1],cell_x+(7*(cell_y-1))}
-            mouse_pointer=16
-          end
-          for i=2,7 do
-            if tile==balls[i][1] then
-              board[cell_y][cell_x]=0
-              balls[i][2]=0
-              mouse_pointer=i
-              break
-            end
-          end
-        else
-          mouse_pointer=16
+      elseif get_tile(cell_x,cell_y)==0 then
+        if mouse_pointer==1 then
+          patrick.x,patrick.y=cell_x,cell_y
+        elseif mouse_pointer>0 then
+          set_tile(cell_x,cell_y,balls[mouse_pointer].id)
         end
+        balls[mouse_pointer].pos=cell_x+(7*(cell_y-1))
+        mouse_pointer=0
+      elseif get_tile(cell_x,cell_y)>0 then
+        local pick_up=get_tile(cell_x,cell_y)
+        set_tile(cell_x,cell_y,0)
+        balls[pick_up].pos=0
+        if (pick_up==1) patrick.x,patrick.y=-1,-1
+        if mouse_pointer==1 then
+          patrick.x,patrick.y=cell_x,cell_y
+          balls[mouse_pointer].pos=cell_x+(7*(cell_y-1))
+        elseif mouse_pointer>0 then
+          set_tile(cell_x,cell_y,balls[mouse_pointer].id)
+          balls[mouse_pointer].pos=cell_x+(7*(cell_y-1))
+        end
+        mouse_pointer=pick_up
       end
     end
   end
@@ -280,7 +309,7 @@ function _draw()
           if (page==2 and (x==patrick.x-1 or x==patrick.x or x==patrick.x+1) and (y==patrick.y-1 or y==patrick.y or y==patrick.y+1)) bg=5
           if (patrick.x==x and patrick.y==y) bg=6
           rectfill(18*(x-1)+1,offset+(18*(y-1))+1,18*(x)-1,offset+(18*(y))-1,bg)
-          if (tile>0) circfill(18*(x-1)+9,offset+(18*(y-1))+9,4,tile)
+          if (tile>0) circfill(18*(x-1)+9,offset+(18*(y-1))+9,4,balls[tile].color)
         end
       end
     end
@@ -373,10 +402,10 @@ function _draw()
     if page==9 or page==10 or page==11 then
       print_code()
     end
-  elseif mode==modes.play or mode==modes.win or mode==modes.game_over then
+  elseif mode==modes.play or mode==modes.win or mode==modes.game_over or mode==modes.custom_play then
     cls()
     print_code()
-    if (destroyed==0) print("x: skip",128-(7*4),0,7)
+    if (destroyed==0 and mode==modes.play) print("x: skip",128-(7*4),0,7)
     local offset=10
     for y=1,4 do
       for x=1,7 do
@@ -403,7 +432,7 @@ function _draw()
             end
           end
           rectfill(18*(x-1)+1,offset+(18*(y-1))+1,18*(x)-1,offset+(18*(y))-1,bg)
-          if (tile>0) circfill(18*(x-1)+9,offset+(18*(y-1))+9,4,tile)
+          if (tile>0) circfill(18*(x-1)+9,offset+(18*(y-1))+9,4,balls[tile].color)
         end
       end
     end
@@ -411,15 +440,17 @@ function _draw()
     palt(6,true)
     local sprite=1
     if kill then
-      local foo=run%balls[1][2]
+      local foo=run%balls[1].pos
       if (foo==3) sprite=3
       if (foo==5) sprite=39
       if (foo==7) sprite=41
     end
     spr(sprite,(18*(patrick.x-1))+2,offset+(18*(patrick.y-1))+2,2,2)
     palt()
-    print("level"..(kill and "-" or " ")..run+1,0,88,7)
-    print("score "..score,0,94,7)
+    if mode!=modes.custom_play then
+      print("level"..(kill and "-" or " ")..run+1,0,88,7)
+      print("score "..score,0,94,7)
+    end
     print("win  +"..60-steps,0,100,5)
     print("lose -"..60+steps,0,106,5)
     print_legend()
@@ -436,6 +467,14 @@ function _draw()
     print("score "..score,0,94,5)
     print("lose -"..60+steps,0,106,8)
     print("score="..max(0,score-(60+steps)),0,114,7)
+    oh_no()
+  elseif mode==modes.win_custom then
+    print("z: edit",128-(7*4),0,7)
+    print("score "..60-steps,0,100,11)
+    all_right()
+  elseif mode==modes.game_over_custom then
+    print("z: edit",128-(7*4),0,7)
+    print("lose -"..60+steps,0,106,8)
     oh_no()
   elseif mode==modes.story then
     if (kill) cls(5) else cls()
@@ -494,8 +533,8 @@ function _draw()
       palt()
       local ball_x=40
       for ball in all(balls) do
-        if ball[1]!=7 then
-          circfill(ball_x,38*6+story_scroll,4,ball[1])
+        if ball.id!=1 then -- todo ball.id!=1
+          circfill(ball_x,38*6+story_scroll,4,ball.color)
           ball_x+=10
         end
       end
@@ -524,6 +563,7 @@ function _draw()
   elseif mode==modes.custom then
     cls()
     print_code()
+    if (patrick.x>0) print("z: play",128-(7*4),0,7)
     print_legend()
     local offset=10
     for y=1,4 do
@@ -532,9 +572,8 @@ function _draw()
         if tile>=0 then
           rect(18*(x-1),offset+(18*(y-1)),18*(x),offset+(18*(y)),14)
           local bg=2
-          --if (patrick.x==x and patrick.y==y) bg=6
           rectfill(18*(x-1)+1,offset+(18*(y-1))+1,18*(x)-1,offset+(18*(y))-1,bg)
-          if (tile>0) circfill(18*(x-1)+9,offset+(18*(y-1))+9,4,tile)
+          if (tile>0) circfill(18*(x-1)+9,offset+(18*(y-1))+9,4,balls[tile].color)
         end
       end
     end
@@ -551,9 +590,9 @@ function _draw()
     local x,y=20,98
     for i=2,7 do
       if mouse_pointer==i then
-        circfill(stat(32)+4,stat(33)+4,4,balls[i][1])
-      elseif balls[i][2]==0 then
-        circfill(x,y,4,balls[i][1])
+        circfill(stat(32)+4,stat(33)+4,4,balls[i].color)
+      elseif balls[i].pos==0 then
+        circfill(x,y,4,balls[i].color)
       end
       x+=10
       if (x==50) x,y=20,108
@@ -596,11 +635,11 @@ end
 
 function print_code()
   local x=0
-  print(balls[1][2],x,0,balls[1][1])
-  x+=#(tostr(balls[1][2]).." ")*4
+  print(balls[1].pos,x,0,balls[1].color)
+  x+=#(tostr(balls[1].pos).." ")*4
   for i=7,2,-1 do
-    print(balls[i][2].." ",x,0,balls[i][1])
-    x+=#tostr(balls[i][2].." ")*4
+    print(balls[i].pos.." ",x,0,balls[i].color)
+    x+=#tostr(balls[i].pos.." ")*4
   end
 end
 
@@ -615,28 +654,21 @@ function print_legend()
 end
 
 function init_board(skip_balls,skip_patrick)
+  balls={
+    {id=1,color=7,pos=0},
+    {id=2,color=9,pos=0},
+    {id=3,color=8,pos=0},
+    {id=4,color=11,pos=0},
+    {id=5,color=1,pos=0},
+    {id=6,color=12,pos=0},
+    {id=7,color=10,pos=0}
+  }
   if not skip_balls then
-    balls={
-      {7,flr(rnd(28))+1},
-      {9,flr(rnd(29))},
-      {8,flr(rnd(29))},
-      {11,flr(rnd(29))},
-      {1,flr(rnd(29))},
-      {12,flr(rnd(29))},
-      {10,flr(rnd(29))}
-    }
-  else
-    balls={
-      {7,0},
-      {9,0},
-      {8,0},
-      {11,0},
-      {1,0},
-      {12,0},
-      {10,0}
-    }
-    if (not skip_patrick) balls={{7,flr(rnd(28))+1}} else patrick={x=-1,y=-1}
+    for ball in all(balls) do
+      ball.pos=flr(rnd(28))+1
+    end
   end
+  if (not skip_patrick) balls[1].pos=flr(rnd(28))+1 else patrick={x=-1,y=-1}
   steps=0
   destroyed=0
   board={}
@@ -648,8 +680,8 @@ function init_board(skip_balls,skip_patrick)
       location+=1
       add(board[y],0)
       for ball in all(balls) do
-        if (location==ball[2]) then
-          if (ball[1]==7) patrick={x=x,y=y} else set_tile(x,y,ball[1])
+        if (location==ball.pos) then
+          if (ball.id==1) patrick={x=x,y=y} else set_tile(x,y,ball.id)
           break
         end
       end
