@@ -26,12 +26,14 @@ function _init()
   emulated=stat(102)!=0
   story_scroll=127
   kill=false
+  mouse_pointer=16
 end
 
 menu={
   function() init_board() mode=modes.play end,
   function() init_board(true) page=1 mode=modes.tutorial end,
   function() init_board() story_scroll=127 mode=modes.story end,
+  function() init_board(true,true) mode=modes.custom end
 }
 
 keys={
@@ -175,6 +177,61 @@ function _update()
         if (story_scroll>-364) story_scroll-=1
       end
     end
+  elseif mode==modes.custom then
+    menuitem(1,"title screen",function() mode=modes.title_screen end)
+    if mouse then
+      local x,y=stat(32),stat(33)
+      cell_x,cell_y=ceil(x/18),ceil((y-10)/18)
+      if patrick.x==-1 and x>=0 and x<=15 and y>=94 and y<=110 then
+        mouse_pointer=1
+      elseif patrick.x==cell_x and patrick.y==cell_y then
+        patrick={x=-1,y=-1}
+        balls[1][2]=0
+        mouse_pointer=1
+      elseif balls[2][2]==0 and x>=16 and x<=24 and y>=94 and y<=102 then
+        mouse_pointer=2
+      elseif balls[3][2]==0 and x>=26 and x<=34 and y>=94 and y<=102 then
+        mouse_pointer=3
+      elseif balls[4][2]==0 and x>=36 and x<=44 and y>=94 and y<=102 then
+        mouse_pointer=4
+      elseif balls[5][2]==0 and x>=16 and x<=24 and y>=104 and y<=112 then
+        mouse_pointer=5
+      elseif balls[6][2]==0 and x>=26 and x<=34 and y>=104 and y<=112 then
+        mouse_pointer=6
+      elseif balls[7][2]==0 and x>=36 and x<=44 and y>=104 and y<=112 then
+        mouse_pointer=7
+      else
+        local tile=get_tile(cell_x,cell_y)
+        if tile!=-1 then
+          if balls[mouse_pointer] then
+            if mouse_pointer==1 then
+              patrick.x,patrick.y=cell_x,cell_y
+            else
+              for i=2,7 do
+                if tile==balls[i][1] then
+                  board[cell_y][cell_x]=balls[mouse_pointer][1]
+                  balls[i][2]=0
+                  mouse_pointer=i
+                  break
+                end
+              end
+            end
+            balls[mouse_pointer]={balls[mouse_pointer][1],cell_x+(7*(cell_y-1))}
+            mouse_pointer=16
+          end
+          for i=2,7 do
+            if tile==balls[i][1] then
+              board[cell_y][cell_x]=0
+              balls[i][2]=0
+              mouse_pointer=i
+              break
+            end
+          end
+        else
+          mouse_pointer=16
+        end
+      end
+    end
   end
 end
 
@@ -204,6 +261,7 @@ function _draw()
     print(menu_selection==1 and ">play_" or "play")
     print(menu_selection==2 and ">tutorial_" or "tutorial")
     print(menu_selection==3 and ">story_" or "story")
+    print(menu_selection==4 and ">custom_" or "custom")
     high_score=dget(1)
     high_run=dget(2)
     cursor(0,100)
@@ -264,13 +322,7 @@ function _draw()
       print("make the correspon-")
       print("ding squares (see")
       print("legend) disappear.")
-      print("legend",86,88,6)
-      spr(5,86,94,2,2)
-      spr(7,86,108,2,2)
-      spr(11,100,94,2,2)
-      spr(9,100,108,2,2)
-      spr(32,114,94,2,2)
-      spr(13,114,108,2,2)
+      print_legend()
     elseif page==7 then
       cursor(36,88)
       print("for each level you win")
@@ -319,23 +371,11 @@ function _draw()
       print("moves and think it's impossible.")
     end
     if page==9 or page==10 or page==11 then
-      local x=0
-      print(balls[1][2],x,0,balls[1][1])
-      x+=#(tostr(balls[1][2]).." ")*4
-      for i=7,2,-1 do
-        print(balls[i][2].." ",x,0,balls[i][1])
-        x+=#tostr(balls[i][2].." ")*4
-      end
+      print_code()
     end
   elseif mode==modes.play or mode==modes.win or mode==modes.game_over then
     cls()
-    local x=0
-    print(balls[1][2],x,0,balls[1][1])
-    x+=#(tostr(balls[1][2]).." ")*4
-    for i=7,2,-1 do
-      print(balls[i][2].." ",x,0,balls[i][1])
-      x+=#tostr(balls[i][2].." ")*4
-    end
+    print_code()
     if (destroyed==0) print("x: skip",128-(7*4),0,7)
     local offset=10
     for y=1,4 do
@@ -382,13 +422,7 @@ function _draw()
     print("score "..score,0,94,7)
     print("win  +"..60-steps,0,100,5)
     print("lose -"..60+steps,0,106,5)
-    print("legend",86,88,6)
-    spr(5,86,94,2,2)
-    spr(7,86,108,2,2)
-    spr(11,100,94,2,2)
-    spr(9,100,108,2,2)
-    spr(32,114,94,2,2)
-    spr(13,114,108,2,2)
+    print_legend()
     if (not emulated) spr(16,stat(32),stat(33))
   end
   if mode==modes.win then
@@ -487,6 +521,44 @@ function _draw()
       end
       scroll_offset+=6
     end
+  elseif mode==modes.custom then
+    cls()
+    print_code()
+    print_legend()
+    local offset=10
+    for y=1,4 do
+      for x=1,7 do
+        local tile=get_tile(x,y)
+        if tile>=0 then
+          rect(18*(x-1),offset+(18*(y-1)),18*(x),offset+(18*(y)),14)
+          local bg=2
+          --if (patrick.x==x and patrick.y==y) bg=6
+          rectfill(18*(x-1)+1,offset+(18*(y-1))+1,18*(x)-1,offset+(18*(y))-1,bg)
+          if (tile>0) circfill(18*(x-1)+9,offset+(18*(y-1))+9,4,tile)
+        end
+      end
+    end
+    palt(0,false)
+    palt(6,true)
+    if mouse_pointer==1 then
+      spr(1,stat(32),stat(33),2,2)
+    elseif patrick.x==-1 then
+      spr(1,0,94,2,2)
+    else
+      spr(1,(18*(patrick.x-1))+2,offset+(18*(patrick.y-1))+2,2,2)
+    end
+    palt()
+    local x,y=20,98
+    for i=2,7 do
+      if mouse_pointer==i then
+        circfill(stat(32)+4,stat(33)+4,4,balls[i][1])
+      elseif balls[i][2]==0 then
+        circfill(x,y,4,balls[i][1])
+      end
+      x+=10
+      if (x==50) x,y=20,108
+    end
+    if (not emulated) spr(16,stat(32),stat(33))
   end
   if page==12 and run==0 then
     print("good\nluck",50,94,11)
@@ -522,7 +594,27 @@ function oh_no()
   print("oh\nno",(18*(patrick.x-2))+4+offset,10+(18*(patrick.y-2))+10,0)
 end
 
-function init_board(skip_balls)
+function print_code()
+  local x=0
+  print(balls[1][2],x,0,balls[1][1])
+  x+=#(tostr(balls[1][2]).." ")*4
+  for i=7,2,-1 do
+    print(balls[i][2].." ",x,0,balls[i][1])
+    x+=#tostr(balls[i][2].." ")*4
+  end
+end
+
+function print_legend()
+  print("legend",86,88,6)
+  spr(5,86,94,2,2)
+  spr(7,86,108,2,2)
+  spr(11,100,94,2,2)
+  spr(9,100,108,2,2)
+  spr(32,114,94,2,2)
+  spr(13,114,108,2,2)
+end
+
+function init_board(skip_balls,skip_patrick)
   if not skip_balls then
     balls={
       {7,flr(rnd(28))+1},
@@ -534,7 +626,16 @@ function init_board(skip_balls)
       {10,flr(rnd(29))}
     }
   else
-    balls={{7,flr(rnd(28))+1}}
+    balls={
+      {7,0},
+      {9,0},
+      {8,0},
+      {11,0},
+      {1,0},
+      {12,0},
+      {10,0}
+    }
+    if (not skip_patrick) balls={{7,flr(rnd(28))+1}} else patrick={x=-1,y=-1}
   end
   steps=0
   destroyed=0
@@ -554,7 +655,7 @@ function init_board(skip_balls)
       end
     end
   end
-  highlight.x,highlight.y=patrick.x,patrick.y
+  if (not skip_patrick) highlight.x,highlight.y=patrick.x,patrick.y
 end
 
 function get_tile(x,y)
