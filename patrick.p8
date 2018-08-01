@@ -32,6 +32,7 @@ function _init()
   story_scroll=127
   kill=false
   mouse_pointer=0
+  fred=0
   music(0)
   title_lines={
     {64,90,64,127,14},
@@ -60,15 +61,13 @@ keys={
   [8]=function(x,y) return x,y<4 and y<patrick.y+1 and y+1 or y end,
 }
 
-
--- kill screen
 kls=cls
 function cls()
   if (not kill) kls()
 end
 
 function _update()
-  if (run>127) kill=true
+  if (run>127 or fred>7) kill=true
   local button=btnp()
   local mouse=stat(34)==1
   local temp_mouse=mouse
@@ -79,7 +78,24 @@ function _update()
     if (button==4) menu_selection=menu_selection==1 and #menu or menu_selection-1
     if (button==8) menu_selection=(menu_selection%#menu)+1
     if (button==0x10) menu[menu_selection][1]()
-    if (button==0x20) kill=true --todo debug
+    local x,y=stat(32),stat(33)
+    if x>=47 and x<=69 and y>=30 and y<=34 then
+      menu_selection=1
+    elseif x>=47 and x<=85 and y>=36 and y<=40 then
+      menu_selection=2
+    elseif x>=47 and x<=73 and y>=42 and y<=46 then
+      menu_selection=3
+    elseif x>=47 and x<=77 and y>=48 and y<=52 then
+      menu_selection=4
+    end
+    if mouse then
+      if x>=15 and x<=20 and y>=3 and y<=10 then
+        fred+=1
+      else
+        menu[menu_selection][1]()
+      end
+      mouse=false
+    end
   elseif mode==modes.play or mode==modes.custom_play then
     menuitem(1,"title screen",function() mode=modes.title_screen music(0) end)
     if (mode==modes.play and button==0x20 and destroyed==0) init_board()
@@ -282,7 +298,13 @@ end
 
 function _draw()
   if mode==modes.title_screen then
+    local x,y=stat(32),stat(33)
     cls()
+    if (fred==1) print("fred?",15,3)
+    if (fred==2) print("fred\nwho?",15,3)
+    if (fred==3) print("freddie\nfinkle?",15,3)
+    if (fred==4) print("that\nbastard",15,3)
+    cursor(0,1)
     center("patrick's",11)
     center("cyberpunk",3)
     center("challenge",8)
@@ -325,6 +347,11 @@ function _draw()
     cursor(0,107)
     center("by",5)
     center("tobiasvl",5)
+    if x>=15 and x<=18 and y>=3 and y<=6 then
+      spr(15,x,y,1,2)
+    else
+      if (not emulated) spr(16,x,y)
+    end
   elseif mode==modes.tutorial then
     cls()
     local s=buttons.o..": next"
@@ -574,7 +601,7 @@ function _draw()
       palt()
       local ball_x=40
       for ball in all(balls) do
-        if ball.id!=1 then -- todo ball.id!=1
+        if ball.id!=1 then
           circfill(ball_x,38*6+story_scroll,4,ball.color)
           ball_x+=10
         end
@@ -753,19 +780,19 @@ function destroy_tile(x,y)
 end
 
 __gfx__
-0000000066666555555666666666633333366666eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee00000000000
-0000000066555555555555666633333333333366e000e000e000e000e000e222e222e000e222e222e000e000e222e222e222e000e000e222e000e00000000000
-0070070066644444444446666664444444444666e000e000e000e000e000e222e222e000e222e222e000e000e222e222e222e000e000e222e000e00000000000
-00077000664aaaaaaaaa44666644aaaaaaaaa466e000e000e000e000e000e222e222e000e222e222e000e000e222e222e222e000e000e222e000e00000000000
-00077000660000000000006666aaccaaaaccaa66eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee00000000000
-0070070066aa00a0aa00aa6666aac0a0aac0aa66e222eaaae222e000e000ebbbe222e000e222eccce000e000e222e888e222e000e000e111e000e00000000000
-0000000066aaaaa0aaaaaa6666aaaaa0aaaaaa66e222eaaae222e000e000ebbbe222e000e222eccce000e000e222e888e222e000e000e111e000e00000000000
-0000000066aaaaa00aaaaa6666aaaaa00aaaaa66e222eaaae222e000e000ebbbe222e000e222eccce000e000e222e888e222e000e000e111e000e00000000000
-30000000666aaaaaa88aa666666aa8aaaa8aa666eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee00000000000
-330000006666aaaaaaaa66666666aa8888aa6666e222e222e222e000e000e222e222e000e222e222e000e000e000e000e000e000e000e222e000e00000000000
-3330000066666655556666666666663333666666e222e222e222e000e000e222e222e000e222e222e000e000e000e000e000e000e000e222e000e00000000000
-3333000066555555555555666633333333333366e222e222e222e000e000e222e222e000e222e222e000e000e000e000e000e000e000e222e000e00000000000
-3333300065565555555565566336333333336336eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee00000000000
+0000000066666555555666666666633333366666eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee00000999900
+0000000066555555555555666633333333333366e000e000e000e000e000e222e222e000e222e222e000e000e222e222e222e000e000e222e000e00009aaaa90
+0070070066644444444446666664444444444666e000e000e000e000e000e222e222e000e222e222e000e000e222e222e222e000e000e222e000e0009aaaaaa9
+00077000664aaaaaaaaa44666644aaaaaaaaa466e000e000e000e000e000e222e222e000e222e222e000e000e222e222e222e000e000e222e000e0009aaaaaa9
+00077000660000000000006666aaccaaaaccaa66eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee0009a6aa6a9
+0070070066aa00a0aa00aa6666aac0a0aac0aa66e222eaaae222e000e000ebbbe222e000e222eccce000e000e222e888e222e000e000e111e000e0009a6aa6a9
+0000000066aaaaa0aaaaaa6666aaaaa0aaaaaa66e222eaaae222e000e000ebbbe222e000e222eccce000e000e222e888e222e000e000e111e000e000096aa690
+0000000066aaaaa00aaaaa6666aaaaa00aaaaa66e222eaaae222e000e000ebbbe222e000e222eccce000e000e222e888e222e000e000e111e000e00000966900
+30000000666aaaaaa88aa666666aa8aaaa8aa666eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee00000555500
+330000006666aaaaaaaa66666666aa8888aa6666e222e222e222e000e000e222e222e000e222e222e000e000e000e000e000e000e000e222e000e00000566500
+3330000066666655556666666666663333666666e222e222e222e000e000e222e222e000e222e222e000e000e000e000e000e000e000e222e000e00000555500
+3333000066555555555555666633333333333366e222e222e222e000e000e222e222e000e222e222e000e000e000e000e000e000e000e222e000e00000566500
+3333300065565555555565566336333333336336eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee00000055000
 33300000655655555555655663363333333363360000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 30000000666655666655666666663366663366660000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000666655666655666666663366663366660000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
