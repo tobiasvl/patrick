@@ -25,20 +25,32 @@ function _init()
   last_mouse=0
   cartdata("tobiasvl_patrick")
   poke(0x5f2d,1)
-  title_y=50
+  title_x=0
+  title_x2=0
   title_dir=true
   emulated=stat(102)!=0
   story_scroll=127
   kill=false
   mouse_pointer=0
   music(0)
+  title_lines={
+    {title_x+64,90,title_x2+64,127,14},
+    {title_x+50,90,title_x2+40,127,14},
+    {title_x+36,90,title_x2+10,127,14},
+    {title_x+22,90,title_x2-30,127,14},
+    {title_x+8,90,title_x2-80-0.5,127,14},
+    {title_x+120,90,title_x2+127+80,127,14},
+    {title_x+106,90,title_x2+127+30,127,14},
+    {title_x+92,90,title_x2+127-10-0.5,127,14},
+    {title_x+78,90,title_x2+127-40-0.5,127,14},
+  }
 end
 
 menu={
-  function() init_board() mode=modes.play music(-1) end,
-  function() init_board(true) page=1 mode=modes.tutorial music(-1) end,
-  function() init_board() story_scroll=127 mode=modes.story end,
-  function() init_board(true,true) mode=modes.custom music(-1) end
+  {function() init_board() mode=modes.play music(-1) end, "play"},
+  {function() init_board(true) page=1 mode=modes.tutorial music(-1) end, "tutorial"},
+  {function() init_board() story_scroll=127 mode=modes.story end, "story"},
+  {function() init_board(true,true) mode=modes.custom music(-1) end, "custom"}
 }
 
 keys={
@@ -47,6 +59,7 @@ keys={
   [4]=function(x,y) return x,y>1 and y>patrick.y-1 and y-1 or y end,
   [8]=function(x,y) return x,y<4 and y<patrick.y+1 and y+1 or y end,
 }
+
 
 -- kill screen
 kls=cls
@@ -65,14 +78,16 @@ function _update()
     menuitem(1)
     if (button==4) menu_selection=menu_selection==1 and #menu or menu_selection-1
     if (button==8) menu_selection=(menu_selection%#menu)+1
-    if (button==0x10) menu[menu_selection]()
+    if (button==0x10) menu[menu_selection][1]()
     if (button==0x20) kill=true --todo debug
   elseif mode==modes.play or mode==modes.custom_play then
     menuitem(1,"title screen",function() mode=modes.title_screen music(0) end)
     if (mode==modes.play and button==0x20 and destroyed==0) init_board()
     if destroyed==27 then
+      sfx(25)
       mode=mode==modes.play and modes.win or modes.win_custom
     elseif get_tile(patrick.x-1,patrick.y)==-1 and get_tile(patrick.x+1,patrick.y)==-1 and get_tile(patrick.x-1,patrick.y-1)==-1 and get_tile(patrick.x,patrick.y-1)==-1 and get_tile(patrick.x+1,patrick.y-1)==-1 and get_tile(patrick.x-1,patrick.y+1)==-1 and get_tile(patrick.x,patrick.y+1)==-1 and get_tile(patrick.x+1,patrick.y+1)==-1 then
+      sfx(8)
       mode=mode==modes.play and modes.game_over or modes.game_over_custom
     end
     new_highlight={}
@@ -98,6 +113,7 @@ function _update()
       patrick.x,patrick.y=highlight.x,highlight.y
       local tile=get_tile(highlight.x,highlight.y)
       if tile>0 then
+        sfx(33)
         if tile==7 or tile==2 then
           destroy_tile(highlight.x-1,highlight.y-1)
           destroy_tile(highlight.x,highlight.y-1)
@@ -119,6 +135,8 @@ function _update()
           destroy_tile(highlight.x+1,highlight.y+1)
         end
         set_tile(highlight.x,highlight.y,0)
+      elseif destroyed!=27 then
+        sfx(60)
       end
     end
   elseif mode==modes.win then
@@ -183,7 +201,6 @@ function _update()
       story_scroll+=1
     elseif btnp(4) or btnp(5) then
       mode=modes.title_screen
-      music(0)
     else
       if not kill then
         story_scroll-=0.2
@@ -217,17 +234,14 @@ function _update()
     if mouse then
       local x,y=stat(32),stat(33)
       cell_x,cell_y=ceil(x/18),ceil((y-10)/18)
-      -- slippe
       if mouse_pointer!=0 and get_tile(cell_x,cell_y)==-1 then
         mouse_pointer=0
-      -- plukk opp patrick fra tray og brett
       elseif patrick.x==-1 and x>=0 and x<=15 and y>=94 and y<=110 then
         mouse_pointer=1
       elseif patrick.x==cell_x and patrick.y==cell_y then
         patrick={x=-1,y=-1}
         balls[1].pos=0
         mouse_pointer=1
-      -- plukk opp ball fra tray
       elseif balls[2].pos==0 and x>=16 and x<=24 and y>=94 and y<=102 then
         mouse_pointer=2
       elseif balls[3].pos==0 and x>=26 and x<=34 and y>=94 and y<=102 then
@@ -272,32 +286,51 @@ function _draw()
     center("patrick's",11)
     center("cyberpunk",3)
     center("challenge",8)
-    if (title_dir) title_y+=0.5 else title_y-=0.5
-    if (title_y==128 or title_y==50) title_dir=not title_dir
-    line(0,title_y,127,title_y,14)
+    title_y=90
+
+    --title_x-=0.5
+    --title_x2-=1
+    line(0,90,127,title_y,14)
     line(0,title_y+6,127,title_y+6,14)
     line(0,title_y+16,127,title_y+16,14)
     line(0,title_y+28,127,title_y+28,14)
     line(0,title_y+46,127,title_y+46,14)
-    line(64,title_y,64,127,14)
-    line(50,title_y,40,127,14)
-    line(36,title_y,10,127,14)
-    line(22,title_y,-30,127,14)
-    line(8,title_y,-80,127,14)
-    line(120,title_y,127+80,127,14)
-    line(106,title_y,127+30,127,14)
-    line(92,title_y,127-10,127,14)
-    line(78,title_y,127-40,127,14)
-    cursor(45,30)
-    print(menu_selection==1 and ">play_" or "play")
-    print(menu_selection==2 and ">tutorial_" or "tutorial")
-    print(menu_selection==3 and ">story_" or "story")
-    print(menu_selection==4 and ">custom_" or "custom")
+    for i=1,#title_lines do
+      line(title_lines[i][1],title_lines[i][2],title_lines[i][3],title_lines[i][4],14)
+      title_lines[i][1]-=0.5
+      title_lines[i][3]-=1
+      if (title_lines[i][1]<0) title_lines[i]={title_x+120,90,title_x2+127+80,127,14}
+    end
+    --line(title_x+64,title_y,title_x2+64,127,14)
+    --line(title_x+50,title_y,title_x2+40,127,14)
+    --line(title_x+36,title_y,title_x2+10,127,14)
+    --line(title_x+22,title_y,title_x2-30,127,14)
+    --line(title_x+8,title_y,title_x2-80-0.5,127,14)
+    --line(title_x+120,title_y,title_x2+127+80,127,14)
+    --line(title_x+106,title_y,title_x2+127+30,127,14)
+    --line(title_x+92,title_y,title_x2+127-10-0.5,127,14)
+    --line(title_x+78,title_y,title_x2+127-40-0.5,127,14)
+    cursor(47,30)
+    for i=1,4 do
+      color(menu_selection==i and 10 or 14)
+      if (menu_selection==i) then
+        color(10)
+        print(">"..menu[i][2].."_")
+      else
+        color(14)
+        print(menu[i][2])
+      end
+    end
+    color()
     high_score=dget(1)
     high_run=dget(2)
-    cursor(0,100)
+    cursor(0,72)
     center("high score: "..high_score,7)
     center("(over "..high_run.." levels)",7)
+    cursor(0,114)
+    clip(0,title_y+1,128,128)
+    center("by",5)
+    center("tobiasvl",5)
   elseif mode==modes.tutorial then
     cls()
     print("z: next",128-(7*4),0,7)
@@ -420,16 +453,16 @@ function _draw()
           if (highlight.x==x and highlight.y==y) bg=6
           local highlighted_tile=get_tile(highlight.x,highlight.y)
           if not kill and highlighted_tile>0 then
-            if highlighted_tile==10 or highlighted_tile==9 then
+            if highlighted_tile==7 or highlighted_tile==2 then
               if (y==highlight.y-1 and (x==highlight.x-1 or x==highlight.x or x==highlight.x+1)) bg=0
             end
-            if highlighted_tile==8 or highlighted_tile==9 then
+            if highlighted_tile==3 or highlighted_tile==2 then
               if (y==highlight.y+1 and (x==highlight.x-1 or x==highlight.x or x==highlight.x+1)) bg=0
             end
-            if highlighted_tile==11 or highlighted_tile==1 then
+            if highlighted_tile==4 or highlighted_tile==5 then
               if (x==highlight.x-1 and (y==highlight.y-1 or y==highlight.y or y==highlight.y+1)) bg=0
             end
-            if highlighted_tile==12 or highlighted_tile==1 then
+            if highlighted_tile==6 or highlighted_tile==5 then
               if (x==highlight.x+1 and (y==highlight.y-1 or y==highlight.y or y==highlight.y+1)) bg=0
             end
           end
