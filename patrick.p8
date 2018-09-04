@@ -18,6 +18,9 @@ modes={
 }
 
 function _init()
+  n=15
+  w=127
+  t=0
   mode=modes.title_screen
   menu_selection=1
   score=0
@@ -310,6 +313,7 @@ function _draw()
   if mode==modes.title_screen then
     local x,y=stat(32),stat(33)
     cls()
+
     if (fred==1) print("fred?",15,3)
     if (fred==2) print("fred\nwho?",15,3)
     if (fred==3) print("freddie\nfinkle?",15,3)
@@ -318,24 +322,28 @@ function _draw()
     center("patrick's",11)
     center("cyberpunk",3)
     center("challenge",8)
-    title_y=90
 
-    line(0,85,127,85,1)
-    line(0,86,127,86,2)
-    line(0,87,127,87,13)
-    line(0,88,127,88,9)
-    line(0,89,127,89,10)
-    line(0,90,127,90,14)
-    line(0,title_y+6,127,title_y+6,14)
-    line(0,title_y+16,127,title_y+16,14)
-    line(0,title_y+28,127,title_y+28,14)
-    line(0,title_y+46,127,title_y+46,14)
-    for i=1,#title_lines do
-      line(title_lines[i][1],title_lines[i][2],title_lines[i][3],title_lines[i][4],14)
-      title_lines[i][1]-=0.5
-      title_lines[i][3]-=1
-      if (title_lines[i][1]<0) title_lines[i]={135,90,127+80,127,14}
+    local title_y=90
+    t-=.5
+    for i=0,n do
+      local z=(i*n+t%n)
+      local y=w*n/z+32
+
+      line(0,title_y-5,127,title_y-5,1)
+      line(0,title_y-4,127,title_y-4,2)
+      line(0,title_y-3,127,title_y-3,13)
+      line(0,title_y-2,127,title_y-2,9)
+      line(0,title_y-1,127,title_y-1,10)
+      line(0,title_y,127,title_y,14)
+      line(0,title_y+6,127,title_y+6,14)
+      line(0,title_y+16,127,title_y+16,14)
+      line(0,title_y+28,127,title_y+28,14)
+      line(0,title_y+46,127,title_y+46,14)
+
+      local v=i+t%n/n-n/2
+      line(v*9+64,title_y,v*60+64,w,14)
     end
+
     cursor(47,30)
     for i=1,4 do
       color(menu_selection==i and 10 or 14)
