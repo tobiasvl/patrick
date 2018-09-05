@@ -318,10 +318,30 @@ function _draw()
     if (fred==2) print("fred\nwho?",15,3)
     if (fred==3) print("freddie\nfinkle?",15,3)
     if (fred==4) print("that\nbastard",15,3)
-    cursor(0,1)
-    center("patrick's",11)
-    center("cyberpunk",3)
-    center("challenge",8)
+
+    outline("patrick's",0,2,11,7,true)
+    outline("cyberpunk",0,9,3,11,true)
+    outline("challenge",0,16,8,0,true)
+
+    cursor(46,30)
+    for i=1,4 do
+      color(menu_selection==i and 10 or 14)
+      if (menu_selection==i) then
+        print(">"..menu[i][2].."_")
+      else
+        print(menu[i][2])
+      end
+    end
+    if (flr(time())%2==0) center("\npress "..buttons.o,6)
+    color()
+    high_score=dget(1)
+    high_run=dget(2)
+    cursor(0,73)
+    center("high score: "..high_score,7)
+    center("(run: "..high_run.." levels)",7)
+    cursor(0,107)
+    center("by",5)
+    center("tobiasvl",5)
 
     local title_y=90
     t-=.5
@@ -344,25 +364,6 @@ function _draw()
       line(v*9+64,title_y,v*60+64,w,14)
     end
 
-    cursor(47,30)
-    for i=1,4 do
-      color(menu_selection==i and 10 or 14)
-      if (menu_selection==i) then
-        print(">"..menu[i][2].."_")
-      else
-        print(menu[i][2])
-      end
-    end
-    if (flr(time())%2==0) center("\npress "..buttons.o,6)
-    color()
-    high_score=dget(1)
-    high_run=dget(2)
-    cursor(0,72)
-    center("high score: "..high_score,7)
-    center("(run: "..high_run.." levels)",7)
-    cursor(0,107)
-    center("by",5)
-    center("tobiasvl",5)
     if x>=15 and x<=18 and y>=3 and y<=6 then
       spr(15,x,y,1,2)
     else
@@ -795,6 +796,19 @@ function destroy_tile(x,y)
   if (set_tile(x,y,-1)) destroyed+=1
 end
 
+function outline(s,x,y,c1,c2,center)
+ if center then
+  x=64-(#s*2)
+ end
+	for i=0,2 do
+	 for j=0,2 do
+	  if not(i==1 and j==1) then
+	   print(s,x+i,y+j,c1)
+	  end
+	 end
+	end
+	print(s,x+1,y+1,c2)
+end
 __gfx__
 0000000066666555555666666666633333366666eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee00000999900
 0000000066555555555555666633333333333366e000e000e000e000e000e222e222e000e222e222e000e000e222e222e222e000e000e222e000e00009aaaa90
