@@ -80,7 +80,7 @@ function _update()
     menuitem(1)
     if (button==4) menu_selection=menu_selection==1 and #menu or menu_selection-1
     if (button==8) menu_selection=(menu_selection%#menu)+1
-    if (button==0x10) menu[menu_selection][1]()
+    if (button==0x20) menu[menu_selection][1]()
     local x,y=stat(32),stat(33)
     if x!=old_x or y!=old_y or mouse then
       old_x,old_y=x,y
@@ -104,7 +104,7 @@ function _update()
     end
   elseif mode==modes.play or mode==modes.custom_play then
     menuitem(1,"title screen",function() mode=modes.title_screen music(0) end)
-    if (mode==modes.play and button==0x20 and destroyed==0) init_board()
+    if (mode==modes.play and button==0x10 and destroyed==0) init_board()
     if destroyed==27 then
       sfx(25)
       mode=mode==modes.play and modes.win or modes.win_custom
@@ -132,7 +132,7 @@ function _update()
     if get_tile(new_highlight.x,new_highlight.y)>=0 then
       highlight=new_highlight
     end
-    if (button==0x10 or mouse) and not (highlight.x==patrick.x and highlight.y==patrick.y) then
+    if (button==0x20 or mouse) and not (highlight.x==patrick.x and highlight.y==patrick.y) then
       steps+=1
       mouse=false
       destroy_tile(patrick.x,patrick.y)
@@ -166,7 +166,7 @@ function _update()
       end
     end
   elseif mode==modes.win then
-    if btnp(4) or mouse then
+    if btnp(5) or mouse then
       score+=60-steps
       run+=1
       if (score>high_score) dset(1,score) dset(2,run)
@@ -175,7 +175,7 @@ function _update()
       mouse=false
     end
   elseif mode==modes.game_over then
-    if btnp(4) or mouse then
+    if btnp(5) or mouse then
       score=max(0,score-60+steps)
       run+=1
       if (score>high_score) dset(1,score) dset(2,run)
@@ -184,7 +184,7 @@ function _update()
       mouse=false
     end
   elseif mode==modes.win_custom or mode==modes.game_over_custom then
-    if btnp(4) or mouse then
+    if btnp(5) or mouse then
       board=backup.board
       patrick=backup.patrick
       balls=backup.balls
@@ -193,7 +193,7 @@ function _update()
     end
   elseif mode==modes.tutorial then
     menuitem(1,"title screen",function() mode=modes.title_screen music(0) end)
-    if btnp(4) or mouse then
+    if btnp(5) or mouse then
       page+=1
       if (page==6) init_board()
       if (page==12) mode=modes.play
@@ -236,7 +236,7 @@ function _update()
     end
   elseif mode==modes.custom then
     menuitem(1,"title screen",function() mode=modes.title_screen music(0) end)
-    if patrick.x>0 and btnp(4) then
+    if patrick.x>0 and btnp(5) then
       highlight.x,highlight.y=patrick.x,patrick.y
       mode=modes.custom_play
       steps=0
@@ -332,7 +332,7 @@ function _draw()
         print(menu[i][2])
       end
     end
-    if (flr(time())%2==0) center("\npress "..buttons.o,6)
+    if (flr(time())%2==0) center("\npress "..buttons.x,6)
     color()
     high_score=dget(1)
     high_run=dget(2)
@@ -371,7 +371,7 @@ function _draw()
     end
   elseif mode==modes.tutorial then
     cls()
-    local s=buttons.o..": next"
+    local s=buttons.x..": next"
     print(s,128-((keyboard and 7 or 8)*4),0,7)
     local offset=10
     for y=1,4 do
@@ -403,7 +403,7 @@ function _draw()
       print("that is adjacent to where he is.")
       print("(even diagonally!)")
       print("                 ⬆️")
-      print("select square: ⬅️⬇️➡️  move: "..buttons.o)
+      print("select square: ⬅️⬇️➡️  move: "..buttons.x)
       print("                  (or mouse)")
     elseif page==3 then
       print("each time patrick moves, the")
@@ -483,7 +483,7 @@ function _draw()
   elseif mode==modes.play or mode==modes.win or mode==modes.game_over or mode==modes.custom_play then
     cls()
     print_code()
-    if (destroyed==0 and mode==modes.play) local s=buttons.x..": skip" print(s,128-((keyboard and 7 or 8)*4),0,7)
+    if (destroyed==0 and mode==modes.play) local s=buttons.o..": skip" print(s,128-((keyboard and 7 or 8)*4),0,7)
     local offset=10
     for y=1,4 do
       for x=1,7 do
@@ -538,26 +538,26 @@ function _draw()
     if (not emulated) spr(16,stat(32),stat(33))
   end
   if mode==modes.win then
-    local s=buttons.o..": next"
+    local s=buttons.x..": next"
     print(s,128-((keyboard and 7 or 8)*4),0,7)
     print("score "..score,0,94,5)
     print("win  +"..60-steps,0,100,11)
     print("score="..score+(60-steps),0,114,7)
     all_right()
   elseif mode==modes.game_over then
-    local s=buttons.o..": next"
+    local s=buttons.x..": next"
     print(s,128-((keyboard and 7 or 8)*4),0,7)
     print("score "..score,0,94,5)
     print("lose -"..60+steps,0,106,8)
     print("score="..max(0,score-(60+steps)),0,114,7)
     oh_no()
   elseif mode==modes.win_custom then
-    local s=buttons.o..": edit"
+    local s=buttons.x..": edit"
     print(s,128-((keyboard and 7 or 8)*4),0,7)
     print("score "..60-steps,0,100,11)
     all_right()
   elseif mode==modes.game_over_custom then
-    local s=buttons.o..": edit"
+    local s=buttons.x..": edit"
     print(s,128-((keyboard and 7 or 8)*4),0,7)
     print("lose -"..60+steps,0,106,8)
     oh_no()
@@ -648,7 +648,7 @@ function _draw()
   elseif mode==modes.custom then
     cls()
     print_code()
-    if (patrick.x>0) local s=buttons.o..": play" print(s,128-((keyboard and 7 or 8)*4),0,7)
+    if (patrick.x>0) local s=buttons.x..": play" print(s,128-((keyboard and 7 or 8)*4),0,7)
     print_legend()
     local offset=10
     for y=1,4 do
