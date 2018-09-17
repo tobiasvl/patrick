@@ -12,9 +12,25 @@ modes={
   tutorial=5,
   story=6,
   custom=7,
-  custom_play=8,
-  win_custom=9,
-  game_over_custom=10,
+  win_custom=8,
+  game_over_custom=9,
+  custom_list=10,
+}
+
+play_modes={
+  challenge=1,
+  infinite=2,
+  custom=3
+}
+
+balls={
+  {id=1,color=7,pos=0},
+  {id=2,color=9,pos=0},
+  {id=3,color=8,pos=0},
+  {id=4,color=11,pos=0},
+  {id=5,color=1,pos=0},
+  {id=6,color=12,pos=0},
+  {id=7,color=10,pos=0}
 }
 
 function _init()
@@ -27,6 +43,10 @@ function _init()
   run=0
   last_mouse,last_x,last_y=0,0,0
   cartdata("tobiasvl_patrick")
+  high_reldni=dget(0)
+  high_score=dget(1)
+  high_run=dget(2)
+  high_custom=dget(3)
   poke(0x5f2d,1)
   title_dir=true
   emulated=stat(102)!=0
@@ -48,39 +68,57 @@ function _init()
     {92,90,127-10.5,127,14},
     {78,90,127-40.5,127,14},
   }
+  custom_score=0
+  custom_levels=load_custom()
+  custom_list_selected=1
+  custom_page=flr(custom_list_selected/20)
+
+  levels={}
+  level_number=0
+
+  main_menu={
+    {function() menu=play_menu end, "play"},
+    {function() init_board(true) page=1 mode=modes.tutorial music(-1) end, "tutorial"},
+    {function() story_scroll=127 mode=modes.story end, "story"},
+    {function() init_board(true,true) mode=modes.custom_list music(-1) end, "edit custom"}
+  }
+  play_menu={
+    {function() init_board() mode=modes.play music(-1) end, "infinite mode"},
+    {function() levels=preset_levels level_number=1 init_board(false,false,levels[level_number]) mode=modes.play music(-1) end, "challenge mode"},
+  }
+
+  menu=main_menu
+
+  keys={
+    [1]=function(x,y) return x>1 and x>patrick.x-1 and x-1 or x,y end,
+    [2]=function(x,y) return x<7 and x<patrick.x+1 and x+1 or x,y end,
+    [4]=function(x,y) return x,y>1 and y>patrick.y-1 and y-1 or y end,
+    [8]=function(x,y) return x,y<4 and y<patrick.y+1 and y+1 or y end,
+  }
 end
-
-menu={
-  {function() init_board() mode=modes.play music(-1) end, "play"},
-  {function() init_board(true) page=1 mode=modes.tutorial music(-1) end, "tutorial"},
-  {function() init_board() story_scroll=127 mode=modes.story end, "story"},
-  {function() init_board(true,true) mode=modes.custom music(-1) end, "custom"}
-}
-
-keys={
-  [1]=function(x,y) return x>1 and x>patrick.x-1 and x-1 or x,y end,
-  [2]=function(x,y) return x<7 and x<patrick.x+1 and x+1 or x,y end,
-  [4]=function(x,y) return x,y>1 and y>patrick.y-1 and y-1 or y end,
-  [8]=function(x,y) return x,y<4 and y<patrick.y+1 and y+1 or y end,
-}
 
 kls=cls
 function cls()
   if (not kill) kls()
 end
 
+-->8
+-- _update()
 function _update()
   if (run>127 or fred>7) kill=true
-  local button=btnp()
   local mouse=stat(34)==1
   local temp_mouse=mouse
   mouse=mouse!=last_mouse and mouse or false
   last_mouse=temp_mouse
   if mode==modes.title_screen then
     menuitem(1)
-    if (button==4) menu_selection=menu_selection==1 and #menu or menu_selection-1
-    if (button==8) menu_selection=(menu_selection%#menu)+1
-    if (button==0x20) menu[menu_selection][1]()
+
+    play_menu[3]=#custom_levels>0 and {function() if #custom_levels>0 then levels=custom_levels level_number=1 init_board(false,false,levels[level_number]) mode=modes.play music(-1) end end, "custom levels"} or nil
+
+    if (btnp(2)) menu_selection=menu_selection==1 and #menu or menu_selection-1
+    if (btnp(3)) menu_selection=(menu_selection%#menu)+1
+    if (btnp(4)) menu_selection=1 menu=main_menu
+    if (btnp(5)) menu[menu_selection][1]()
     local x,y=stat(32),stat(33)
     if x!=old_x or y!=old_y or mouse then
       old_x,old_y=x,y
@@ -102,15 +140,25 @@ function _update()
       end
       mouse=false
     end
-  elseif mode==modes.play or mode==modes.custom_play then
+  elseif mode==modes.play then
+    local button=btnp()
     menuitem(1,"title screen",function() mode=modes.title_screen music(0) end)
-    if (mode==modes.play and button==0x10 and destroyed==0) init_board()
+    if mode==modes.play and button==0x10 and destroyed==0 then
+      if #levels!=0 then
+        if level_number<#levels then
+          level_number+=1
+        else
+          mode=modes.congrats
+        end
+      end
+      init_board(false,false,levels[level_number])
+    end
     if destroyed==27 then
       sfx(25)
       mode=mode==modes.play and modes.win or modes.win_custom
     elseif get_tile(patrick.x-1,patrick.y)==-1 and get_tile(patrick.x+1,patrick.y)==-1 and get_tile(patrick.x-1,patrick.y-1)==-1 and get_tile(patrick.x,patrick.y-1)==-1 and get_tile(patrick.x+1,patrick.y-1)==-1 and get_tile(patrick.x-1,patrick.y+1)==-1 and get_tile(patrick.x,patrick.y+1)==-1 and get_tile(patrick.x+1,patrick.y+1)==-1 then
       sfx(8)
-      mode=mode==modes.play and modes.game_over or modes.game_over_custom
+      mode=modes.game_over
     end
     new_highlight={}
     new_highlight.x,new_highlight.y=highlight.x,highlight.y
@@ -170,7 +218,14 @@ function _update()
       score+=60-steps
       run+=1
       if (score>high_score) dset(1,score) dset(2,run)
-      init_board()
+      if #levels!=0 then
+        if level_number<#levels then
+          level_number+=1
+        else
+          mode=modes.congrats
+        end
+      end
+      init_board(false,false,levels[level_number])
       mode=modes.play
       mouse=false
     end
@@ -179,15 +234,12 @@ function _update()
       score=max(0,score-60+steps)
       run+=1
       if (score>high_score) dset(1,score) dset(2,run)
-      init_board()
+      init_board(false,false,levels[level_number])
       mode=modes.play
       mouse=false
     end
   elseif mode==modes.win_custom or mode==modes.game_over_custom then
     if btnp(5) or mouse then
-      board=backup.board
-      patrick=backup.patrick
-      balls=backup.balls
       mode=modes.custom
       mouse=false
     end
@@ -237,25 +289,15 @@ function _update()
   elseif mode==modes.custom then
     menuitem(1,"title screen",function() mode=modes.title_screen music(0) end)
     if patrick.x>0 and btnp(5) then
-      highlight.x,highlight.y=patrick.x,patrick.y
-      mode=modes.custom_play
-      steps=0
-      destroyed=0
-      backup={}
-      backup.board,backup.balls,backup.patrick={},{},{}
-      backup.patrick.x,backup.patrick.y=patrick.x,patrick.y
-      for y=1,4 do
-        backup.board[y]={}
-        for x=1,7 do
-          backup.board[y][x]=board[y][x]
-        end
+      if not custom_levels[custom_list_selected] then
+        custom_levels[custom_list_selected]={}
       end
-      for i=1,7 do
-        backup.balls[i]={}
-        backup.balls[i].id=balls[i].id
-        backup.balls[i].color=balls[i].color
-        backup.balls[i].pos=balls[i].pos
+      custom_levels[custom_list_selected][1]=balls[1].pos
+      for i=2,7 do
+        custom_levels[custom_list_selected][7-(i-2)]=balls[i].pos
       end
+      save_custom()
+      mode=modes.custom_list
     end
     if mouse then
       local x,y=stat(32),stat(33)
@@ -306,9 +348,26 @@ function _update()
         end
       end
     end
+  elseif mode==modes.custom_list then
+    if btnp(2) then
+      if (custom_list_selected>1) custom_list_selected-=1
+      if (custom_list_selected<(custom_page*20)+1) custom_page-=1
+    end
+    if btnp(3) then
+      if (custom_list_selected<50 and custom_levels[custom_list_selected]!=nil) custom_list_selected+=1
+      if (custom_list_selected>(custom_page*20)+20) custom_page+=1
+    end
+    if (btnp(4)) mode=modes.title_screen
+    if btnp(5) then
+      local empty_level=custom_levels[custom_list_selected]==nil
+      init_board(empty_level,empty_level,custom_levels[custom_list_selected])
+      mode=modes.custom
+    end
   end
 end
 
+-->8
+-- _draw()
 function _draw()
   if mode==modes.title_screen then
     local x,y=stat(32),stat(33)
@@ -323,8 +382,8 @@ function _draw()
     outline("cyberpunk",0,9,3,11,true)
     outline("challenge",0,16,8,0,true)
 
-    cursor(46,30)
-    for i=1,4 do
+    cursor(35,45)
+    for i=1,#menu do
       color(menu_selection==i and 10 or 14)
       if (menu_selection==i) then
         print(">"..menu[i][2].."_")
@@ -332,13 +391,20 @@ function _draw()
         print(menu[i][2])
       end
     end
-    if (flr(time())%2==0) center("\npress "..buttons.x,6)
-    color()
-    high_score=dget(1)
-    high_run=dget(2)
     cursor(0,73)
-    center("high score: "..high_score,7)
-    center("(run: "..high_run.." levels)",7)
+
+    if menu==main_menu then
+      if (flr(time())%2==0) center("\npress "..buttons.x,6)
+    else
+      color()
+      if menu_selection==1 then
+        center("high score: "..high_score,7)
+        center("(run: "..high_run.." levels)",7)
+      else
+        center("high score: "..(menu_selection==2 and high_reldni or high_custom),7)
+      end
+    end
+
     cursor(0,107)
     center("by",5)
     center("tobiasvl",5)
@@ -480,7 +546,7 @@ function _draw()
     if page==9 or page==10 or page==11 then
       print_code()
     end
-  elseif mode==modes.play or mode==modes.win or mode==modes.game_over or mode==modes.custom_play then
+  elseif mode==modes.play or mode==modes.win or mode==modes.game_over then
     cls()
     print_code()
     if (destroyed==0 and mode==modes.play) local s=buttons.o..": skip" print(s,128-((keyboard and 7 or 8)*4),0,7)
@@ -528,10 +594,8 @@ function _draw()
     end
     spr(sprite,(18*(patrick.x-1))+2,offset+(18*(patrick.y-1))+2,2,2)
     palt()
-    if mode!=modes.custom_play then
-      print("level"..(kill and "-" or " ")..run+1,0,88,7)
-      print("score "..score,0,94,7)
-    end
+    print("level"..(kill and "-" or " ")..run+1,0,88,7)
+    print("score "..score,0,94,7)
     print("win  +"..60-steps,0,100,5)
     print("lose -"..60+steps,0,106,5)
     print_legend()
@@ -623,7 +687,7 @@ function _draw()
           ball_x+=10
         end
       end
-      if (story_scroll<-300) local str="press z" print(str,64-(#str*2),64,7)
+      if (story_scroll<-300) local str="press "..buttons.x print(str,64-(#str*2),64,7)
     end
     for str in all(story) do
       if (scroll_offset==6*10) color(8) else color(7)
@@ -648,7 +712,7 @@ function _draw()
   elseif mode==modes.custom then
     cls()
     print_code()
-    if (patrick.x>0) local s=buttons.x..": play" print(s,128-((keyboard and 7 or 8)*4),0,7)
+    if (patrick.x>0) local s=buttons.x..": save" print(s,128-((keyboard and 7 or 8)*4),0,7)
     print_legend()
     local offset=10
     for y=1,4 do
@@ -683,6 +747,45 @@ function _draw()
       if (x==50) x,y=20,108
     end
     if (not emulated) spr(16,stat(32),stat(33))
+  elseif mode==modes.congrats then
+    cls()
+    print("you beat all levels!")
+    print("your score: "..score)
+    print("")
+    print("you can play these levels again")
+    print("to try for a better score.")
+    print("")
+    print("or check out the infinite mode to get")
+    print("as many points as possible")
+    print("or make your own levels in the custom mode!")
+  elseif mode==modes.custom_list then
+    cls()
+    for i=(custom_page*20)+1,min((custom_page*20)+20,50) do
+      local code=""
+      if i<=#custom_levels+1 then
+        if custom_list_selected==i then
+          color(14)
+        else
+          if (i<=#custom_levels) color(10) else color(6)
+        end
+        for j in all(custom_levels[i]) do
+          code=code.." "..(j<10 and " " or "")..j
+        end
+      else
+        color(5)
+      end
+      print((custom_list_selected==i and ">" or "")..i.." "..(i==#custom_levels+1 and stat(95)%2==0 and "_" or "")..(i<10 and " " or "")..code)
+    end
+
+    if (custom_page>0) print("\148",120,0,7)
+    if ((custom_page*20)+20<#custom_levels) print("\131",120,114,7)
+
+    print(buttons.x,113,60,7)
+    if custom_levels[custom_list_selected] then
+      print("edit",109,66,7)
+    else
+      print("create",105,66,7)
+    end
   end
   if page==12 and run==0 then
     print("good\nluck",50,94,11)
@@ -691,6 +794,8 @@ function _draw()
   end
 end
 
+-->8
+-- misc functions
 function center(str,c)
   local x=peek(0x5f26)
   poke(0x5f26,64-(#str*2))
@@ -738,43 +843,6 @@ function print_legend()
   spr(13,114,108,2,2)
 end
 
-function init_board(skip_balls,skip_patrick)
-  balls={
-    {id=1,color=7,pos=0},
-    {id=2,color=9,pos=0},
-    {id=3,color=8,pos=0},
-    {id=4,color=11,pos=0},
-    {id=5,color=1,pos=0},
-    {id=6,color=12,pos=0},
-    {id=7,color=10,pos=0}
-  }
-  if not skip_balls then
-    for ball in all(balls) do
-      ball.pos=flr(rnd(28))+1
-    end
-  end
-  if (not skip_patrick) balls[1].pos=flr(rnd(28))+1 else patrick={x=-1,y=-1}
-  steps=0
-  destroyed=0
-  board={}
-  highlight={}
-  local location=0
-  for y=1,4 do
-    add(board,{})
-    for x=1,7 do
-      location+=1
-      add(board[y],0)
-      for ball in all(balls) do
-        if (location==ball.pos) then
-          if (ball.id==1) patrick={x=x,y=y} else set_tile(x,y,ball.id)
-          break
-        end
-      end
-    end
-  end
-  if (not skip_patrick) highlight.x,highlight.y=patrick.x,patrick.y
-end
-
 function get_tile(x,y)
   if x>=1 and x<=7 and y>=1 and y<=4 then
     return board[y][x]
@@ -809,6 +877,195 @@ function outline(s,x,y,c1,c2,center)
 	end
 	print(s,x+1,y+1,c2)
 end
+
+-->8
+-- init_board
+function init_board(skip_balls,skip_patrick,level)
+  if not level then
+    if not skip_balls then
+      for ball in all(balls) do
+        ball.pos=flr(rnd(28))+1
+      end
+    end
+    if (not skip_patrick) balls[1].pos=flr(rnd(28))+1 else patrick={x=-1,y=-1}
+  else
+    balls[1].pos=level[1]
+    for i=2,7 do
+      balls[i].pos=level[7-(i-2)]
+    end
+  end
+
+  steps=0
+  destroyed=0
+  board={}
+  highlight={}
+  local location=0
+  for y=1,4 do
+    add(board,{})
+    for x=1,7 do
+      location+=1
+      add(board[y],0)
+      for ball in all(balls) do
+        if (location==ball.pos) then
+          if (ball.id==1) patrick={x=x,y=y} else set_tile(x,y,ball.id)
+          break
+        end
+      end
+    end
+  end
+  if (not skip_patrick) highlight.x,highlight.y=patrick.x,patrick.y
+end
+
+-->8
+-- custom level routines
+-- custom levels are stored as packed bytes:
+-- 5 bits per ball, 7 balls per level
+
+-- save custom levels as packed bytes
+-- we enqueue 5-bit balls in a fifo, and dequeue 8-bit bytes
+function save_custom()
+  local addr=0x5e10 --first four numbers are used for hiscores
+  local level_num=1 --current level number
+  local level=custom_levels[level_num] --current level
+  local ball_num=1 --current ball in level
+  local byte_queue,queue_length=0,0 --fifo queue of bytes to be saved
+
+  while level do
+    local ball=level[ball_num]
+
+    -- pack ball at end of queue
+    byte_queue=rotl(byte_queue,5)
+    byte_queue=bor(byte_queue,ball)
+    queue_length+=5
+
+    -- queue contains a full byte
+    if queue_length>=8 then
+      -- rotate rest of queue to after decimal point
+      byte_queue=rotr(byte_queue,queue_length-8)
+      -- save byte
+      printh("poking "..addr)
+      poke(addr,byte_queue)
+      addr+=1
+      -- dequeue byte
+      byte_queue=band(byte_queue,0xff00.ffff)
+      -- restore queue
+      byte_queue=rotl(byte_queue,queue_length-8)
+      queue_length-=8
+    end
+
+    ball_num+=1
+
+    -- a full level has been saved
+    if ball_num>7 then
+      level_num+=1
+      level=custom_levels[level_num]
+      ball_num=1
+    end
+  end
+
+  -- empty the queue
+  if queue_length!=0 then
+    poke(addr,rotl(byte_queue,8-queue_length))
+  end
+end
+
+-- load packed bytes into levels
+-- we enqueue 8-bit bytes from a fifo, and dequeue 5-bit balls
+function load_custom()
+  local levels,level={},{}
+  local addr=0x5e10 --first four numbers are used for hiscores
+  local ball_queue,queue_length=0,0 --fifo queue of balls/bytes to be loaded
+
+  -- read all cartridge save data
+  while #levels<=50 and addr<0x5f00 do
+    local byte=peek(addr)
+    addr+=1
+
+    -- enqueue byte
+    ball_queue=rotl(ball_queue,8)
+    ball_queue=bor(byte,ball_queue)
+    queue_length+=8
+
+    -- queue contains a full ball
+    while queue_length>=5 do
+      -- rotate rest of queue after decimal point
+      ball_queue=rotr(ball_queue,queue_length-5)
+      -- load ball
+      add(level,band(ball_queue,0b11111))
+      -- dequeue ball
+      ball_queue=band(ball_queue,0b1111111111100000.1111111111111111)
+      -- restore queue
+      ball_queue=rotl(ball_queue,queue_length-5)
+      queue_length-=5
+      if (#level==7) break
+    end
+
+    -- a full level has been loaded
+    if #level==7 then
+      -- save loaded level unless patrick's not present
+      -- (avoid loading empty levels)
+      if level[1]!=0 then
+        add(levels,level)
+      end
+      level={}
+    end
+  end
+  -- the queue should always be empty at this point
+  assert(queue_length==0)
+  return levels
+end
+
+-->8
+-- reldni levels
+-- http://web.archive.org/web/20020127141411fw_/http://www.reldni.com:80/archive/patrick2.html
+preset_levels={
+  {27,7,25,6,26,1,15},
+  {14,11,5,16,11,6,13},
+  {12,27,24,1,10,18,13},
+  {20,23,21,28,1,9,21},
+  {12,15,13,19,21,1,13},
+  {28,14,8,19,14,9,16},
+  {8,17,19,20,16,1,10},
+  {6,19,13,24,18,13,21},
+  {20,11,11,4,25,11,23},
+  {1,11,9,23,20,18,6},
+  {27,14,8,19,14,9,16},
+  {19,22,20,27,28,8,20},
+  {2,27,21,4,27,22,1},
+  {13,16,14,20,22,2,14},
+  {20,18,12,23,17,12,20},
+  {25,28,26,5,6,14,26},
+  {5,11,11,4,25,11,23},
+  {27,10,7,1,18,23,23},
+  {4,12,2,11,4,6,20},
+  {28,7,25,7,27,1,15},
+  {18,25,4,17,14,8,19},
+  {3,11,5,16,11,6,13},
+  {4,20,16,10,0,0,6},
+  {27,8,9,11,6,20,28},
+  {5,16,19,23,17,6,11},
+  {9,8,17,19,21,16,2},
+  {13,20,19,9,17,2,2},
+  {20,19,16,26,24,8,20},
+  {6,15,17,18,14,27,7},
+  {27,20,25,10,23,24,0},
+  {10,9,5,15,14,26,10},
+  {6,10,11,16,1,26,14},
+  {27,17,20,3,7,1,18},
+  {10,20,17,12,1,5,6},
+  {11,19,9,18,11,13,27},
+  {4,18,24,21,3,1,13},
+  {27,10,7,1,18,23,23},
+  {12,20,10,19,12,14,28},
+  {18,4,26,9,4,27,7},
+  {10,20,17,11,1,5,6},
+  {27,14,8,19,14,9,16},
+  {14,22,12,21,13,16,2},
+  {16,4,26,9,4,27,7},
+  {12,0,0,11,0,19,13},
+  {24,2,13,20,13,6,21},
+  {8,21,15,26,21,16,23},
+}
 __gfx__
 0000000066666555555666666666633333366666eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee00000999900
 0000000066555555555555666633333333333366e000e000e000e000e000e222e222e000e222e222e000e000e222e222e222e000e000e222e000e00009aaaa90
