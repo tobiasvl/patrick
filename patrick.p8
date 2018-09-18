@@ -15,6 +15,7 @@ modes={
   win_custom=8,
   game_over_custom=9,
   custom_list=10,
+  ending=11,
 }
 
 play_modes={
@@ -144,13 +145,6 @@ function _update()
     local button=btnp()
     menuitem(1,"title screen",function() mode=modes.title_screen music(0) end)
     if mode==modes.play and button==0x10 and destroyed==0 then
-      if #levels!=0 then
-        if level_number<#levels then
-          level_number+=1
-        else
-          mode=modes.congrats
-        end
-      end
       init_board(false,false,levels[level_number])
     end
     if destroyed==27 then
@@ -222,7 +216,7 @@ function _update()
         if level_number<#levels then
           level_number+=1
         else
-          mode=modes.congrats
+          mode=modes.ending
         end
       end
       init_board(false,false,levels[level_number])
@@ -362,6 +356,21 @@ function _update()
       local empty_level=custom_levels[custom_list_selected]==nil
       init_board(empty_level,empty_level,custom_levels[custom_list_selected])
       mode=modes.custom
+    end
+  elseif mode==modes.ending then
+    menuitem(1,"title screen",function() mode=modes.title_screen music(0) end)
+    if btn(2) then
+      story_scroll-=1
+    elseif btn(3) then
+      story_scroll+=1
+    elseif btnp(4) or btnp(5) then
+      mode=modes.title_screen
+    else
+      if not kill then
+        story_scroll-=0.2
+      else
+        if (story_scroll>-364) story_scroll-=1
+      end
     end
   end
 end
@@ -747,17 +756,122 @@ function _draw()
       if (x==50) x,y=20,108
     end
     if (not emulated) spr(16,stat(32),stat(33))
-  elseif mode==modes.congrats then
+  elseif mode==modes.ending then
     cls()
-    print("you beat all levels!")
-    print("your score: "..score)
-    print("")
-    print("you can play these levels again")
-    print("to try for a better score.")
-    print("")
-    print("or check out the infinite mode to get")
-    print("as many points as possible")
-    print("or make your own levels in the custom mode!")
+    if (story_scroll<-150 and story_scroll>-155) or (story_scroll<-160 and story_scroll>-165) or (story_scroll<-170 and story_scroll>-175) then
+      rectfill(0,0,128,128,8)
+      palt(0,false)
+      palt(6,true)
+
+      pal(0,13)
+      pal(10,13)
+      pal(7,13)
+      pal(8,13)
+
+      spr(41,56,80,2,2)
+      spr(43,56,96,2,2)
+      pal()
+      palt()
+    elseif story_scroll<-180 then
+      if story_scroll>-190 then
+        pal(6,1)
+        pal(0,13)
+        pal(10,13)
+        pal(7,13)
+        pal(8,13)
+      elseif story_scroll>-200 then
+        pal(6,5)
+        pal(0,6)
+        pal(10,6)
+        pal(7,6)
+        pal(8,6)
+      end
+      rectfill(0,0,128,128,6)
+      palt(0,false)
+      palt(6,true)
+      if story_scroll>-250 then
+        spr(41,56,80,2,2)
+        spr(43,56,96,2,1)
+        spr(59,56,96+8,2,1)
+      elseif story_scroll<-250 then
+        spr(41,story_scroll+250+56,80,2,2)
+        spr(43,story_scroll+250+56,96,2,1)
+        spr(flr(story_scroll)%2==0 and 59 or 45,story_scroll+250+56,96+8)
+        spr(flr(story_scroll)%2!=0 and 60 or 61,story_scroll+250+56+8,96+8)
+      end
+      pal()
+      palt()
+      if story_scroll<-200 then
+        --trapdoor
+        line(56,0,40,8,0)
+        line(72,0,88,8,0)
+        --sign
+        rect(68,12,114,30,0)
+        rectfill(69,13,113,29,5)
+        pset(70,14,0)
+        pset(70,28,0)
+        pset(112,28,0)
+        pset(112,14,0)
+        print("vinnie's",80,16,6)
+        print("tomb",88,22,6)
+        --arrow
+        line(74,16,74,26,6)
+        line(74,16,70,20,6)
+        line(74,16,78,20,6)
+        line(0,112,128,112,0)
+        --screen
+        rectfill(14,43,112,57,0)
+        rectfill(15,42,111,58,0)
+        --ground and drops
+        rectfill(0,113,128,128,5)
+        local x,y=flr(rnd(127)),flr(rnd(127))
+        line(x,y,x,y+3,12)
+      end
+      if story_scroll<-220 and story_scroll>-240 then
+        spr(36,50,65,3,2,true)
+        print("where\nam i?",52,66,0)
+      end
+      if story_scroll<-150 then
+        if flr(story_scroll)%3!=0 then
+          cursor(0,45)
+          center("warning:",8)
+          center("power failure in cryo #1",8)
+        end
+      end
+    end
+    local story={
+      "patrick has made it.",
+      "",
+      "",
+      "he has hacked the sinister zebra",
+      "corporation's virtual reality",
+      "system, and gained access to",
+      "their mainframe.",
+      "",
+      "",
+      "as the tomb bot factories shut",
+      "down all over fun land, ernie",
+      "york's electronic weather",
+      "systems also lose power, and",
+      "the rain finally ends after",
+      "several decades.",
+      "",
+      "",
+      "unbeknown to patrick, deep in",
+      "the underworld, underneath the",
+      "fabled vinnie's tomb, one of",
+      "ernie york's cryogenics chambers",
+      "also shuts down..."
+    }
+    local scroll_offset=0
+    for str in all(story) do
+      print(str,64-(#str*2),story_scroll+scroll_offset)
+      if story_scroll>-4 then
+        local x,y=flr(rnd(127)),flr(rnd(127))
+        line(x,y,x-3,y-3,7)
+      end
+      scroll_offset+=6
+    end
   elseif mode==modes.custom_list then
     cls()
     for i=(custom_page*20)+1,min((custom_page*20)+20,50) do
