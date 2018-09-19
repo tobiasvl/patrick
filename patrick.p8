@@ -78,14 +78,40 @@ function _init()
   level_number=0
 
   main_menu={
-    {function() menu=play_menu end, "play"},
-    {function() init_board(true) page=1 mode=modes.tutorial music(-1) end, "tutorial"},
-    {function() story_scroll=127 mode=modes.story end, "story"},
-    {function() init_board(true,true) mode=modes.custom_list music(-1) end, "edit custom"}
+    {function()
+      menu=play_menu
+    end, "play"},
+    {function()
+      init_board(true)
+      page=1
+      mode=modes.tutorial
+      music(-1)
+    end, "tutorial"},
+    {function()
+      story_scroll=127
+      mode=modes.story
+    end, "story"},
+    {function()
+      init_board(true,true)
+      mode=modes.custom_list
+      music(-1)
+    end, "edit custom"}
   }
   play_menu={
-    {function() init_board() mode=modes.play music(-1) end, "infinite mode"},
-    {function() levels=preset_levels level_number=1 init_board(false,false,levels[level_number]) mode=modes.play music(-1) end, "challenge mode"},
+    {function()
+      init_board()
+      play_mode=play_modes.infinite
+      mode=modes.play
+      music(-1)
+    end, "infinite mode"},
+    {function()
+      levels=preset_levels
+      level_number=1
+      play_mode=play_modes.challenge
+      init_board(false,false,levels[level_number])
+      mode=modes.play
+      music(-1)
+    end, "challenge mode"},
   }
 
   menu=main_menu
@@ -114,7 +140,14 @@ function _update()
   if mode==modes.title_screen then
     menuitem(1)
 
-    play_menu[3]=#custom_levels>0 and {function() if #custom_levels>0 then levels=custom_levels level_number=1 init_board(false,false,levels[level_number]) mode=modes.play music(-1) end end, "custom levels"} or nil
+    play_menu[3]=#custom_levels>0 and {function()
+      levels=custom_levels
+      level_number=1
+      play_mode=play_modes.custom
+      init_board(false,false,levels[level_number])
+      mode=modes.play
+      music(-1)
+    end, "custom levels"} or nil
 
     if (btnp(2)) menu_selection=menu_selection==1 and #menu or menu_selection-1
     if (btnp(3)) menu_selection=(menu_selection%#menu)+1
@@ -144,12 +177,12 @@ function _update()
   elseif mode==modes.play then
     local button=btnp()
     menuitem(1,"title screen",function() mode=modes.title_screen music(0) end)
-    if mode==modes.play and button==0x10 and destroyed==0 then
+    if play_mode==play_modes.infinite and button==0x10 and destroyed==0 then
       init_board(false,false,levels[level_number])
     end
     if destroyed==27 then
       sfx(25)
-      mode=mode==modes.play and modes.win or modes.win_custom
+      mode=modes.win
     elseif get_tile(patrick.x-1,patrick.y)==-1 and get_tile(patrick.x+1,patrick.y)==-1 and get_tile(patrick.x-1,patrick.y-1)==-1 and get_tile(patrick.x,patrick.y-1)==-1 and get_tile(patrick.x+1,patrick.y-1)==-1 and get_tile(patrick.x-1,patrick.y+1)==-1 and get_tile(patrick.x,patrick.y+1)==-1 and get_tile(patrick.x+1,patrick.y+1)==-1 then
       sfx(8)
       mode=modes.game_over
@@ -210,9 +243,10 @@ function _update()
   elseif mode==modes.win then
     if btnp(5) or mouse then
       score+=60-steps
-      run+=1
-      if (score>high_score) dset(1,score) dset(2,run)
-      if #levels!=0 then
+      if play_mode==play_modes.infinite then
+        run+=1
+        if (score>high_score) dset(1,score) dset(2,run)
+      elseif play_mode==play_modes.challenge then
         if level_number<#levels then
           level_number+=1
         else
@@ -226,8 +260,10 @@ function _update()
   elseif mode==modes.game_over then
     if btnp(5) or mouse then
       score=max(0,score-60+steps)
-      run+=1
-      if (score>high_score) dset(1,score) dset(2,run)
+      if play_mode==play_modes.infinite then
+        run+=1
+        if (score>high_score) dset(1,score) dset(2,run)
+      end
       init_board(false,false,levels[level_number])
       mode=modes.play
       mouse=false
@@ -558,7 +594,7 @@ function _draw()
   elseif mode==modes.play or mode==modes.win or mode==modes.game_over then
     cls()
     print_code()
-    if (destroyed==0 and mode==modes.play) local s=buttons.o..": skip" print(s,128-((keyboard and 7 or 8)*4),0,7)
+    if (destroyed==0 and play_mode==play_modes.infinite) local s=buttons.o..": skip" print(s,128-((keyboard and 7 or 8)*4),0,7)
     local offset=10
     for y=1,4 do
       for x=1,7 do
@@ -603,7 +639,11 @@ function _draw()
     end
     spr(sprite,(18*(patrick.x-1))+2,offset+(18*(patrick.y-1))+2,2,2)
     palt()
-    print("level"..(kill and "-" or " ")..run+1,0,88,7)
+    if play_mode==play_modes.infinite then
+      print("level"..(kill and "-" or " ")..run+1,0,88,7)
+    else
+      print("level"..(kill and "-" or " ")..level_number,0,88,7)
+    end
     print("score "..score,0,94,7)
     print("win  +"..60-steps,0,100,5)
     print("lose -"..60+steps,0,106,5)
@@ -618,8 +658,13 @@ function _draw()
     print("score="..score+(60-steps),0,114,7)
     all_right()
   elseif mode==modes.game_over then
-    local s=buttons.x..": next"
-    print(s,128-((keyboard and 7 or 8)*4),0,7)
+    if play_mode==play_modes.infinite then
+      local s=buttons.x..": next"
+      print(s,128-((keyboard and 7 or 8)*4),0,7)
+    else
+      local s=buttons.x..": retry"
+      print(s,128-((keyboard and 8 or 9)*4),0,7)
+    end
     print("score "..score,0,94,5)
     print("lose -"..60+steps,0,106,8)
     print("score="..max(0,score-(60+steps)),0,114,7)
@@ -1162,7 +1207,7 @@ preset_levels={
   {13,20,19,9,17,2,2},
   {20,19,16,26,24,8,20},
   {6,15,17,18,14,27,7},
-  {27,20,25,10,23,24,0},
+  {27,20,25,10,23,24,0}, -- ?
   {10,9,5,15,14,26,10},
   {6,10,11,16,1,26,14},
   {27,17,20,3,7,1,18},
