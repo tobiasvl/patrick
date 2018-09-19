@@ -132,7 +132,6 @@ end
 -->8
 -- _update()
 function _update()
-  if (run>127 or fred>7) kill=true
   local mouse=stat(34)==1
   local temp_mouse=mouse
   mouse=mouse!=last_mouse and mouse or false
@@ -169,6 +168,14 @@ function _update()
     if mouse then
       if x>=15 and x<=20 and y>=3 and y<=10 then
         fred+=1
+        if fred==4 then
+          add(main_menu,{function()
+            story_scroll=127
+            mode=modes.ending
+          end, "ending"})
+        elseif fred==7 then
+          kill=true
+        end
       else
         menu[menu_selection][1]()
       end
@@ -402,11 +409,7 @@ function _update()
     elseif btnp(4) or btnp(5) then
       mode=modes.title_screen
     else
-      if not kill then
-        story_scroll-=0.2
-      else
-        if (story_scroll>-364) story_scroll-=1
-      end
+      story_scroll-=0.2
     end
   end
 end
