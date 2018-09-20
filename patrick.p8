@@ -879,12 +879,27 @@ function _draw()
         spr(36,50,65,3,2,true)
         print("where\nam i?",52,66,0)
       end
-      if story_scroll<-150 then
+      if story_scroll<-150 and story_scroll>-325 then
         if flr(story_scroll)%3!=0 then
           cursor(0,45)
           center("warning:",8)
           center("power failure in cryo #1",8)
         end
+      elseif story_scroll<-325 and story_scroll>-350 then
+        cursor(0,45)
+        center("a game by",11)
+        center("tobias v. langhoff",11)
+      elseif story_scroll<-350 and story_scroll>-375 then
+        cursor(0,45)
+        center("based on a game by",11)
+        center("reldni productions",11)
+      elseif story_scroll<-375 and story_scroll>-400 then
+        cursor(0,45)
+        center("dedicated to",11)
+        center("troy scott 1970-2000",11)
+      elseif story_scroll<-400 then
+        cursor(0,48)
+        center("press "..buttons.x)
       end
     end
     local story={
