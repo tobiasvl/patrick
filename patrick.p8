@@ -99,12 +99,6 @@ function _init()
   }
   play_menu={
     {function()
-      init_board()
-      play_mode=play_modes.infinite
-      mode=modes.play
-      music(-1)
-    end, "infinite mode"},
-    {function()
       levels=preset_levels
       level_number=1
       play_mode=play_modes.challenge
@@ -112,6 +106,12 @@ function _init()
       mode=modes.play
       music(-1)
     end, "challenge mode"},
+    {function()
+      init_board()
+      play_mode=play_modes.infinite
+      mode=modes.play
+      music(-1)
+    end, "infinite mode"},
   }
 
   menu=main_menu
@@ -445,7 +445,7 @@ function _draw()
       if (flr(time())%2==0) center("\npress "..buttons.x,6)
     else
       color()
-      if menu_selection==1 then
+      if menu_selection==2 then
         center("high score: "..high_score,7)
         center("(run: "..high_run.." levels)",7)
       else
