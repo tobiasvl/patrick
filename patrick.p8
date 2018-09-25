@@ -597,13 +597,17 @@ function _draw()
   elseif mode==modes.play or mode==modes.win or mode==modes.game_over then
     cls()
     print_code()
-    if (destroyed==0 and play_mode==play_modes.infinite) local s=buttons.o..": skip" print(s,128-((keyboard and 7 or 8)*4),0,7)
+    if destroyed==0 and play_mode==play_modes.infinite then
+      local s=buttons.o..": skip"
+      print(s,128-((keyboard and 7 or 8)*4),0,7)
+    end
     local offset=10
     for y=1,4 do
       for x=1,7 do
+        local pos={x=18*(x-1),y=offset+(18*(y-1))}
         local tile=get_tile(x,y)
         if tile>=0 then
-          rect(18*(x-1),offset+(18*(y-1)),18*(x),offset+(18*(y)),14)
+          rect(pos.x,pos.y,18*(x),offset+(18*(y)),14)
           local bg=2
           if (not kill and (x==patrick.x-1 or x==patrick.x or x==patrick.x+1) and (y==patrick.y-1 or y==patrick.y or y==patrick.y+1)) bg=5
           if (patrick.x==x and patrick.y==y) bg=0
@@ -623,8 +627,48 @@ function _draw()
               if (x==highlight.x+1 and (y==highlight.y-1 or y==highlight.y or y==highlight.y+1)) bg=0
             end
           end
-          rectfill(18*(x-1)+1,offset+(18*(y-1))+1,18*(x)-1,offset+(18*(y))-1,bg)
-          if (tile>0) circfill(18*(x-1)+9,offset+(18*(y-1))+9,4,balls[tile].color)
+          rectfill(pos.x+1,pos.y+1,18*(x)-1,offset+(18*(y))-1,bg)
+          if tile>0 then
+            circfill(pos.x+9,pos.y+9,4,balls[tile].color)
+
+            local beams=function(dir,pos)
+
+              local dirs={
+                u={pos.x+9,pos.y+2,pos.x+9,pos.y+3},
+                ur={pos.x+14,pos.y+4,pos.x+15,pos.y+3},
+                r={pos.x+15,pos.y+9,pos.x+16,pos.y+9},
+                dr={pos.x+14,pos.y+14,pos.x+15,pos.y+15},
+                d={pos.x+9,pos.y+15,pos.x+9,pos.y+16},
+                dl={pos.x+3,pos.y+15,pos.x+4,pos.y+14},
+                l={pos.x+2,pos.y+9,pos.x+3,pos.y+9},
+                ul={pos.x+3,pos.y+3,pos.x+4,pos.y+4}
+              }
+              return dirs[dir][1],dirs[dir][2],dirs[dir][3],dirs[dir][4]
+            end
+
+            if flr(time())%2==0 then
+              if tile==7 or tile==2 then
+                for dir in all({"ul","u","ur"}) do
+                  line(beams(dir,pos))
+                end
+              end
+              if tile==3 or tile==2 then
+                for dir in all({"dl","d","dr"}) do
+                  line(beams(dir,pos))
+                end
+              end
+              if tile==4 or tile==5 then
+                for dir in all({"ul","l","dl"}) do
+                  line(beams(dir,pos))
+                end
+              end
+              if tile==6 or tile==5 then
+                for dir in all({"dr","r","ur"}) do
+                  line(beams(dir,pos))
+                end
+              end
+            end
+          end
         end
       end
     end
