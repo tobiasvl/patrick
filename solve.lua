@@ -9,7 +9,13 @@
   about 3.5 hours with the 50 stock Reldni levels.
 ]]
 
-local preset_levels={
+local patrick = {}
+
+patrick.impossible_levels={
+  {11,28,2,0,27,1,0},
+}
+
+patrick.preset_levels={
   {27,7,25,6,26,1,15},
   {14,11,5,16,11,6,13},
   {12,27,24,1,10,18,13},
@@ -58,7 +64,7 @@ local preset_levels={
   {8,21,15,26,21,16,23},
 }
 
-function dfs(level)
+function solve(level, find_all)
   local solutions=0
   local solution_lengths = {}
   local shortest_steps=28
@@ -96,16 +102,10 @@ function dfs(level)
 
   local add = table.insert
   local concat = table.concat
+
   function solve_rec(g,v,balls,path)
     g[v].discovered=true
     add(path,v)
-
-    local stuck=true
-    for _,w in ipairs(g[v]) do
-      if not g[w].discovered then
-        stuck=false
-      end
-    end
 
     local solved=true
     for _,w in ipairs(g) do
@@ -115,15 +115,19 @@ function dfs(level)
     end
 
     if solved then
-      solutions = solutions + 1
-      if solution_lengths[#path] then
-        solution_lengths[#path] = solution_lengths[#path] + 1
+      if find_all then
+        solutions = solutions + 1
+        if solution_lengths[#path] then
+          solution_lengths[#path] = solution_lengths[#path] + 1
+        else
+          solution_lengths[#path] = 1
+        end
+        if #path < shortest_steps then
+          shortest_steps = #path
+          shortest_solution = concat(path, " ")
+        end
       else
-        solution_lengths[#path] = 1
-      end
-      if #path < shortest_steps then
-        shortest_steps = #path
-        shortest_solution = concat(path, " ")
+        return true
       end
     end
 
@@ -156,7 +160,9 @@ function dfs(level)
             add(revert,g[x])
           end
         end
-        solve_rec(g,w,balls,path)
+        if solve_rec(g,w,balls,path) and not find_all then
+          return true
+        end
         for _,i in ipairs(revert) do
           i.discovered=false
         end
@@ -165,20 +171,44 @@ function dfs(level)
     g[v].discovered=false
     path[#path]=nil
   end
-  solve_rec(graph,level[1],level,{})
-  return shortest_steps, shortest_solution, solutions, solution_lengths
+
+  local result = solve_rec(graph,level[1],level,{})
+  if find_all then
+    return shortest_steps, shortest_solution, solutions, solution_lengths
+  else
+    return result
+  end
 end
 
-local shortest_steps, shortest_solution, solutions, solution_lengths
-for i=1,#preset_levels do
-  shortest_steps, shortest_solution, solutions, solution_lengths = dfs(preset_levels[i])
-  print("LEVEL " .. i)
-  print("Shortest steps: " .. shortest_steps)
-  print("Shortest solution: " .. shortest_solution)
-  print("Solutions: " .. solutions)
-  print("Paths: ")
-  for l,n in pairs(solution_lengths) do
-    print(l .. ": " .. n)
+function patrick.analyze_levels(levels)
+  local shortest_steps, shortest_solution, solutions, solution_lengths
+
+  levels = levels or {}
+
+  if tonumber(levels[1]) then
+    shortest_steps, shortest_solution, solutions, solution_lengths = solve(levels, true)
+    return {shortest_steps = shortest_steps, shortest_solution = shortest_solution, solutions = solutions, solution_lengths = solution_lengths}
   end
-  print("")
+
+  local result = {}
+  for _,i in ipairs(levels) do
+    shortest_steps, shortest_solution, solutions, solution_lengths = solve(preset_levels[i], true)
+    table.insert(result, {shortest_steps = shortest_steps, shortest_solution = shortest_solution, solutions = solutions, solution_lengths = solution_lengths})
+  end
 end
+
+function patrick.solvable(levels)
+  levels = levels or {}
+
+  if tonumber(levels[1]) then
+    return solve(levels)
+  end
+
+  local result = {}
+  for _,level in ipairs(levels) do
+    table.insert(result, solve(level))
+  end
+  return result
+end
+
+return patrick
