@@ -49,7 +49,6 @@ function _init()
   high_run=dget(2)
   high_custom=dget(3)
   poke(0x5f2d,1)
-  title_dir=true
   emulated=stat(102)!=0
   keyboard=stat(102)!=0 and stat(102)!="www.lexaloffle.com" and stat(102)!="www.playpico.com"
   buttons={o=keyboard and "z" or "🅾️",x=keyboard and "x" or "❎"}
@@ -73,6 +72,8 @@ function _init()
   custom_levels=load_custom()
   custom_list_selected=1
   custom_page=flr(custom_list_selected/20)
+
+  load_progress()
 
   levels={}
   level_number=0
@@ -189,6 +190,14 @@ function _update()
     end
     if destroyed==27 then
       sfx(25)
+      if play_mode==play_modes.challenge then
+        local status=1
+        for i=1,2 do
+          if (steps<=stars[level_number][i]) status+=1
+        end
+        preset_levels[level_number].status=status
+        save_progress()
+      end
       mode=modes.win
     elseif get_tile(patrick.x-1,patrick.y)==-1 and get_tile(patrick.x+1,patrick.y)==-1 and get_tile(patrick.x-1,patrick.y-1)==-1 and get_tile(patrick.x,patrick.y-1)==-1 and get_tile(patrick.x+1,patrick.y-1)==-1 and get_tile(patrick.x-1,patrick.y+1)==-1 and get_tile(patrick.x,patrick.y+1)==-1 and get_tile(patrick.x+1,patrick.y+1)==-1 then
       sfx(8)
@@ -249,15 +258,17 @@ function _update()
     end
   elseif mode==modes.win then
     if btnp(5) or mouse then
-      score+=60-steps
-      if play_mode==play_modes.infinite then
-        run+=1
-        if (score>high_score) dset(1,score) dset(2,run)
-      elseif play_mode==play_modes.challenge then
+      if play_mode==play_modes.challenge then
         if level_number<#levels then
           level_number+=1
         else
           mode=modes.ending
+        end
+      else
+        score+=60-steps
+        if play_mode==play_modes.infinite then
+          run+=1
+          if (score>high_score) dset(1,score) dset(2,run)
         end
       end
       init_board(false,false,levels[level_number])
@@ -266,7 +277,7 @@ function _update()
     end
   elseif mode==modes.game_over then
     if btnp(5) or mouse then
-      score=max(0,score-60+steps)
+      if (play_mode!=play_modes.challenge) score=max(0,score-60+steps)
       if play_mode==play_modes.infinite then
         run+=1
         if (score>high_score) dset(1,score) dset(2,run)
@@ -550,10 +561,10 @@ function _draw()
       print("you get 60 points minus")
       print("the number of squares")
       print("you landed on.")
-      print("level "..run+1,0,88,7)
-      print("score "..score,0,94,7)
-      print("win  +"..60-steps,0,100,11)
-      print("lose -"..60+steps,0,106,5)
+      print("level "..run+1,1,88,7)
+      print("score "..score,1,94,7)
+      print("win  +"..60-steps,1,100,11)
+      print("lose -"..60+steps,1,106,5)
     elseif page==8 then
       cursor(36,88)
       print("for each level you lose,")
@@ -561,10 +572,10 @@ function _draw()
       print("the number of squares")
       print("you landed on deducted")
       print("from your score.")
-      print("level "..run+1,0,88,7)
-      print("score "..score,0,94,7)
-      print("win  +"..60-steps,0,100,5)
-      print("lose -"..60+steps,0,106,8)
+      print("level "..run+1,1,88,7)
+      print("score "..score,1,94,7)
+      print("win  +"..60-steps,1,100,5)
+      print("lose -"..60+steps,1,106,8)
     elseif page==9 then
       cursor(0,86)
       color(11)
@@ -687,44 +698,67 @@ function _draw()
     spr(sprite,(18*(patrick.x-1))+2,offset+(18*(patrick.y-1))+2,2,2)
     palt()
     if play_mode==play_modes.infinite then
-      print("level"..(kill and "-" or " ")..run+1,0,88,7)
+      print("level"..(kill and "-" or " ")..run+1,1,88,7)
     else
-      print("level"..(kill and "-" or " ")..level_number,0,88,7)
+      print("level"..(kill and "-" or " ")..level_number,1,88,7)
     end
-    print("score "..score,0,94,7)
-    print("win  +"..60-steps,0,100,5)
-    print("lose -"..60+steps,0,106,5)
+    if play_mode==play_modes.challenge then
+      print("steps "..steps,40,88,7)
+      outline("\146",40,95,levels[level_number].status>0 and 11 or 7,9)
+      local x=50
+      for i=1,2 do
+        outline("\146",x,95,levels[level_number].status>=i+1 and 11 or 7,steps<=stars[level_number][i] and 9 or 0)
+        x+=10
+      end
+    else
+      print("score "..score,1,94,7)
+      print("win  +"..60-steps,1,100,5)
+      print("lose -"..60+steps,1,106,5)
+    end
     print_legend()
     if (not emulated) spr(16,stat(32),stat(33))
   end
   if mode==modes.win then
     local s=buttons.x..": next"
     print(s,128-((keyboard and 7 or 8)*4),0,7)
-    print("score "..score,0,94,5)
-    print("win  +"..60-steps,0,100,11)
-    print("score="..score+(60-steps),0,114,7)
+    if play_mode!=play_modes.challenge then
+      print("score "..score,1,94,5)
+      print("win  +"..60-steps,1,100,11)
+      print("score="..score+(60-steps),1,114,7)
+    else
+      local x=40
+      for i=1,3 do
+        outline("\146",x,95,levels[level_number].status>=i and 11 or 7,levels[level_number].status>=i and 9 or 0)
+        x+=10
+      end
+    end
     all_right()
   elseif mode==modes.game_over then
-    if play_mode==play_modes.infinite then
+    if play_mode!=play_modes.challenge then
       local s=buttons.x..": next"
       print(s,128-((keyboard and 7 or 8)*4),0,7)
+      print("score "..score,1,94,5)
+      print("lose -"..60+steps,1,106,8)
+      print("score="..max(0,score-(60+steps)),1,114,7)
     else
       local s=buttons.x..": retry"
       print(s,128-((keyboard and 8 or 9)*4),0,7)
+      local x=40
+      for i=1,3 do
+        outline("\146",x,95,levels[level_number].status>=i and 11 or 7,0)
+        x+=10
+      end
     end
-    print("score "..score,0,94,5)
-    print("lose -"..60+steps,0,106,8)
-    print("score="..max(0,score-(60+steps)),0,114,7)
     oh_no()
   elseif mode==modes.win_custom then
     local s=buttons.x..": edit"
     print(s,128-((keyboard and 7 or 8)*4),0,7)
-    print("score "..60-steps,0,100,11)
+    print("score "..60-steps,1,100,11)
     all_right()
   elseif mode==modes.game_over_custom then
     local s=buttons.x..": edit"
     print(s,128-((keyboard and 7 or 8)*4),0,7)
-    print("lose -"..60+steps,0,106,8)
+    print("lose -"..60+steps,1,106,8)
     oh_no()
   elseif mode==modes.story then
     if (kill) cls(5) else cls()
@@ -1045,7 +1079,7 @@ function oh_no()
 end
 
 function print_code()
-  local x=0
+  local x=1
   print(balls[1].pos,x,0,balls[1].color)
   x+=#(tostr(balls[1].pos).." ")*4
   for i=7,2,-1 do
@@ -1135,6 +1169,27 @@ function init_board(skip_balls,skip_patrick,level)
     end
   end
   if (not skip_patrick) highlight.x,highlight.y=patrick.x,patrick.y
+end
+-->8
+-- progress routines
+function save_progress()
+  local addr=0x5eeb
+  local byte=0
+  for i=1,#preset_levels do
+    byte=bor(byte,preset_levels[i].status)
+    byte=rotl(byte,2)
+    if (i%3==0) poke(addr,byte) addr+=1 byte=0
+  end
+end
+
+function load_progress()
+  local addr=0x5eeb
+  local byte=peek(addr)
+  for i=1,40 do
+    preset_levels[i].status=rotr(band(byte,0b11000000),6)
+    byte=rotl(byte,2)
+    if (i%4==0) addr+=1 byte=peek(addr)
+  end
 end
 
 -->8
@@ -1227,12 +1282,14 @@ function load_custom()
       -- (avoid loading empty levels)
       if level[1]!=0 then
         add(levels,level)
+      else
+        break
       end
       level={}
     end
   end
   -- the queue should always be empty at this point
-  assert(queue_length==0)
+  assert(queue_length==0 or ball_queue==0)
   return levels
 end
 
@@ -1286,6 +1343,11 @@ preset_levels={
   {12,0,0,11,0,19,13},
   {24,2,13,20,13,6,21},
   {8,21,15,26,21,16,23},
+}
+
+stars={
+  {23,19},
+  {21,16}
 }
 __gfx__
 0000000066666555555666666666633333366666eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee00000999900
