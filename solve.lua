@@ -134,10 +134,9 @@ function solve(level, find_all)
     for _,w in ipairs(g[v]) do
       if not g[w].discovered then
         local tile=0
-        for ball=1,7 do
+        for ball=2,7 do
           if balls[ball]==w then
             tile=ball
-            break
           end
         end
         local revert={}
