@@ -64,11 +64,12 @@ patrick.preset_levels={
   {8,21,15,26,21,16,23},
 }
 
-function solve(level, find_all)
+function solve(level, find_all, memo)
   local solutions=0
   local solution_lengths = {}
   local shortest_steps=28
   local shortest_solution=""
+  local num_paths = {}
   local graph={
     {9,8,2,},
     {10,9,1,8,3,},
@@ -100,12 +101,22 @@ function solve(level, find_all)
     {20,21,27,},
   }
 
+  -- local lookups for efficiency
   local add = table.insert
   local concat = table.concat
+  local bit
+  if type(jit) == 'table' then
+    bit = require "bit"
+  else
+    bit = require "bit32"
+  end
+  local bor = bit.bor
+  local lshift = bit.lshift
 
-  function solve_rec(g,v,balls,path)
+  function solve_rec(g,v,balls,path,num_path,memo)
     g[v].discovered=true
     add(path,v)
+    if memo then num_path = bor(num_path, lshift(1, v - 1)) end
 
     local solved=true
     for _,w in ipairs(g) do
@@ -132,7 +143,14 @@ function solve(level, find_all)
     end
 
     for _,w in ipairs(g[v]) do
-      if not g[w].discovered then
+      local tried=false
+      if memo and num_paths[num_path] then
+        for _,foo in ipairs(num_paths[num_path]) do
+          if foo == w then tried=true end
+        end
+      end
+
+      if not tried and not g[w].discovered then
         local tile=0
         for ball=2,7 do
           if balls[ball]==w then
@@ -159,19 +177,27 @@ function solve(level, find_all)
             add(revert,g[x])
           end
         end
-        if solve_rec(g,w,balls,path) and not find_all then
+        if solve_rec(g,w,balls,path,num_path,memo) and not find_all then
           return true
+        end
+        if memo then
+          if not num_paths[num_path] then
+            num_paths[num_path] = {w}
+          else
+            add(num_paths[num_path], w)
+          end
         end
         for _,i in ipairs(revert) do
           i.discovered=false
         end
       end
     end
+
     g[v].discovered=false
     path[#path]=nil
   end
 
-  local result = solve_rec(graph,level[1],level,{})
+  local result = solve_rec(graph,level[1],level,{},0,memo)
   if find_all then
     return shortest_steps, shortest_solution, solutions, solution_lengths
   else
@@ -179,33 +205,33 @@ function solve(level, find_all)
   end
 end
 
-function patrick.analyze_levels(levels)
+function patrick.analyze_levels(levels, memo)
   local shortest_steps, shortest_solution, solutions, solution_lengths
 
   levels = levels or {}
 
   if tonumber(levels[1]) then
-    shortest_steps, shortest_solution, solutions, solution_lengths = solve(levels, true)
+    shortest_steps, shortest_solution, solutions, solution_lengths = solve(levels, true, memo)
     return {shortest_steps = shortest_steps, shortest_solution = shortest_solution, solutions = solutions, solution_lengths = solution_lengths}
   end
 
   local result = {}
   for _,i in ipairs(levels) do
-    shortest_steps, shortest_solution, solutions, solution_lengths = solve(preset_levels[i], true)
+    shortest_steps, shortest_solution, solutions, solution_lengths = solve(preset_levels[i], true, memo)
     table.insert(result, {shortest_steps = shortest_steps, shortest_solution = shortest_solution, solutions = solutions, solution_lengths = solution_lengths})
   end
 end
 
-function patrick.solvable(levels)
+function patrick.solvable(levels, memo)
   levels = levels or {}
 
   if tonumber(levels[1]) then
-    return solve(levels)
+    return solve(levels, false, memo)
   end
 
   local result = {}
   for _,level in ipairs(levels) do
-    table.insert(result, solve(level))
+    table.insert(result, solve(level, false, memo))
   end
   return result
 end
