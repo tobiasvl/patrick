@@ -1,5 +1,5 @@
 pico-8 cartridge // http://www.pico-8.com
-version 16
+version 18
 __lua__
 -- patrick's cyberpunk challenge
 -- by tobiasvl
@@ -16,6 +16,7 @@ modes={
   game_over_custom=9,
   custom_list=10,
   ending=11,
+  challenge_list=12,
 }
 
 play_modes={
@@ -53,25 +54,19 @@ function _init()
   keyboard=stat(102)!=0 and stat(102)!="www.lexaloffle.com" and stat(102)!="www.playpico.com"
   buttons={o=keyboard and "z" or "🅾️",x=keyboard and "x" or "❎"}
   story_scroll=127
-  kill=false
   mouse_pointer=0
   fred=0
   music(0)
-  title_lines={
-    {64,90,64,127,14},
-    {50,90,40,127,14},
-    {36,90,10,127,14},
-    {22,90,-30,127,14},
-    {8,90,-80.5,127,14},
-    {120,90,127+65,127,14},
-    {106,90,127+30,127,14},
-    {92,90,127-10.5,127,14},
-    {78,90,127-40.5,127,14},
-  }
+
   custom_score=0
   custom_levels=load_custom()
   custom_list_selected=1
-  custom_page=flr(custom_list_selected/20)
+  custom_page_size=20
+  custom_page=flr(custom_list_selected/custom_page_size)
+
+  challenge_list_selected=1
+  challenge_page_size=13
+  challenge_page=flr(challenge_list_selected/challenge_page_size)
 
   load_progress()
 
@@ -104,7 +99,7 @@ function _init()
       level_number=1
       play_mode=play_modes.challenge
       init_board(false,false,levels[level_number])
-      mode=modes.play
+      mode=modes.challenge_list
       music(-1)
     end, "challenge mode"},
     {function()
@@ -123,11 +118,6 @@ function _init()
     [4]=function(x,y) return x,y>1 and y>patrick.y-1 and y-1 or y end,
     [8]=function(x,y) return x,y<4 and y<patrick.y+1 and y+1 or y end,
   }
-end
-
-kls=cls
-function cls()
-  if (not kill) kls()
 end
 
 -->8
@@ -156,13 +146,13 @@ function _update()
     local x,y=stat(32),stat(33)
     if x!=old_x or y!=old_y or mouse then
       old_x,old_y=x,y
-      if x>=47 and x<=69 and y>=30 and y<=34 then
+      if x>=35 and x<=69 and y>=45 and y<=49 then
         menu_selection=1
-      elseif x>=47 and x<=85 and y>=36 and y<=40 then
+      elseif x>=35 and x<=85 and y>=50 and y<=54 then
         menu_selection=2
-      elseif x>=47 and x<=73 and y>=42 and y<=46 then
+      elseif x>=35 and x<=73 and y>=55 and y<=59 then
         menu_selection=3
-      elseif x>=47 and x<=77 and y>=48 and y<=52 then
+      elseif x>=35 and x<=77 and y>=60 and y<=64 then
         menu_selection=4
       end
     end
@@ -174,8 +164,9 @@ function _update()
             story_scroll=127
             mode=modes.ending
           end, "ending"})
-        elseif fred==7 then
-          kill=true
+          for i=1,#preset_levels do
+            preset_levels[i].status=3
+          end
         end
       else
         menu[menu_selection][1]()
@@ -184,10 +175,13 @@ function _update()
     end
   elseif mode==modes.play then
     local button=btnp()
-    menuitem(1,"title screen",function() mode=modes.title_screen music(0) end)
-    if play_mode==play_modes.infinite and button==0x10 and destroyed==0 then
-      init_board(false,false,levels[level_number])
+    if play_mode==play_modes.infinite then
+      menuitem(1,"custom levels",function() mode=modes.custom_list music(0) end)
+      if (button==0x10 and destroyed==0) init_board(false,false,levels[level_number])
+    else
+      menuitem(1,"level select",function() mode=modes.challenge_list music(0) end)
     end
+    menuitem(2,"title screen",function() mode=modes.title_screen music(0) end)
     if destroyed==27 then
       sfx(25)
       if play_mode==play_modes.challenge then
@@ -195,7 +189,9 @@ function _update()
         for i=1,2 do
           if (steps<=stars[level_number][i]) status+=1
         end
-        preset_levels[level_number].status=status
+        if status>preset_levels[level_number].status then
+          preset_levels[level_number].status=status
+        end
         save_progress()
       end
       mode=modes.win
@@ -259,10 +255,17 @@ function _update()
   elseif mode==modes.win then
     if btnp(5) or mouse then
       if play_mode==play_modes.challenge then
-        if level_number<#levels then
-          level_number+=1
-        else
+        local won=0
+        for i=1,#preset_levels do
+          if (preset_levels[i].status > 0) won += 1
+        end
+        if won==#levels then
           mode=modes.ending
+        elseif level_number<#levels then
+          level_number+=1
+          mode=modes.play
+        else
+          mode=modes.challenge_list
         end
       else
         score+=60-steps
@@ -270,9 +273,9 @@ function _update()
           run+=1
           if (score>high_score) dset(1,score) dset(2,run)
         end
+        mode=modes.play
       end
       init_board(false,false,levels[level_number])
-      mode=modes.play
       mouse=false
     end
   elseif mode==modes.game_over then
@@ -293,6 +296,7 @@ function _update()
     end
   elseif mode==modes.tutorial then
     menuitem(1,"title screen",function() mode=modes.title_screen music(0) end)
+    play_mode=play_modes.infinite
     if btnp(5) or mouse then
       page+=1
       if (page==6) init_board()
@@ -328,11 +332,7 @@ function _update()
     elseif btnp(4) or btnp(5) then
       mode=modes.title_screen
     else
-      if not kill then
-        story_scroll-=0.2
-      else
-        if (story_scroll>-364) story_scroll-=1
-      end
+      story_scroll-=0.2
     end
   elseif mode==modes.custom then
     menuitem(1,"title screen",function() mode=modes.title_screen music(0) end)
@@ -399,17 +399,34 @@ function _update()
   elseif mode==modes.custom_list then
     if btnp(2) then
       if (custom_list_selected>1) custom_list_selected-=1
-      if (custom_list_selected<(custom_page*20)+1) custom_page-=1
+      if (custom_list_selected<(custom_page*custom_page_size)+1) custom_page-=1
     end
     if btnp(3) then
       if (custom_list_selected<50 and custom_levels[custom_list_selected]!=nil) custom_list_selected+=1
-      if (custom_list_selected>(custom_page*20)+20) custom_page+=1
+      if (custom_list_selected>(custom_page*custom_page_size)+custom_page_size) custom_page+=1
     end
     if (btnp(4)) mode=modes.title_screen
     if btnp(5) then
       local empty_level=custom_levels[custom_list_selected]==nil
       init_board(empty_level,empty_level,custom_levels[custom_list_selected])
       mode=modes.custom
+    end
+  elseif mode==modes.challenge_list then
+    if btnp(2) then
+      if (challenge_list_selected>1) challenge_list_selected-=1
+      if (challenge_list_selected<(challenge_page*challenge_page_size)+1) challenge_page-=1
+    end
+    if btnp(3) then
+      if (challenge_list_selected<46 and preset_levels[challenge_list_selected]!=nil) challenge_list_selected+=1
+      if (challenge_list_selected>(challenge_page*challenge_page_size)+challenge_page_size) challenge_page+=1
+    end
+    if (btnp(4)) mode=modes.title_screen
+    if btnp(5) then
+      levels=preset_levels
+      level_number=challenge_list_selected
+      play_mode=play_modes.challenge
+      init_board(false,false,levels[level_number])
+      mode=modes.play
     end
   elseif mode==modes.ending then
     menuitem(1,"title screen",function() mode=modes.title_screen music(0) end)
@@ -466,7 +483,7 @@ function _draw()
 
     cursor(0,107)
     center("by",5)
-    center("tobiasvl",5)
+    center("tvil",5)
 
     local title_y=90
     t-=.5
@@ -545,9 +562,7 @@ function _draw()
       color(11)
       cursor(0,88)
       print("if you make all the squares")
-      print("disappear, you win the level.\n")
-      print("either way, a new level will")
-      print("automatically be generated.")
+      print("disappear, you win the level.")
     elseif page==6 then
       print("moving patrick to a")
       print("colored ball will")
@@ -557,6 +572,7 @@ function _draw()
       print_legend()
     elseif page==7 then
       cursor(36,88)
+      print("infinite/custom mode:")
       print("for each level you win")
       print("you get 60 points minus")
       print("the number of squares")
@@ -595,9 +611,9 @@ function _draw()
       print("can't be 0 or overridden.")
     elseif page==11 then
       cursor(0,86)
-      print("it is unknown at this time")
-      print("whether it is possible to have")
-      print("or create an unsolvable level.")
+      print("levels in infinite mode are not")
+      print("guaranteed to be solvable at")
+      print("this time. sorry.")
       print("you can skip a level without")
       print("penalty if you have not made any")
       print("moves and think it's impossible.")
@@ -620,11 +636,11 @@ function _draw()
         if tile>=0 then
           rect(pos.x,pos.y,18*(x),offset+(18*(y)),14)
           local bg=2
-          if (not kill and (x==patrick.x-1 or x==patrick.x or x==patrick.x+1) and (y==patrick.y-1 or y==patrick.y or y==patrick.y+1)) bg=5
+          if ((x==patrick.x-1 or x==patrick.x or x==patrick.x+1) and (y==patrick.y-1 or y==patrick.y or y==patrick.y+1)) bg=5
           if (patrick.x==x and patrick.y==y) bg=0
           if (highlight.x==x and highlight.y==y) bg=6
           local highlighted_tile=get_tile(highlight.x,highlight.y)
-          if not kill and highlighted_tile>0 then
+          if highlighted_tile>0 then
             if highlighted_tile==7 or highlighted_tile==2 then
               if (y==highlight.y-1 and (x==highlight.x-1 or x==highlight.x or x==highlight.x+1)) bg=0
             end
@@ -685,22 +701,12 @@ function _draw()
     end
     palt(0,false)
     palt(6,true)
-    local sprite=1
-    if kill then
-      local foo=run%balls[1].pos
-      if (foo==3) sprite=3
-      if (foo==5) sprite=39
-      if (foo==7) sprite=41
-      if (foo==9) sprite=46
-      if (foo==13) sprite=64
-      if (foo==15) sprite=66
-    end
-    spr(sprite,(18*(patrick.x-1))+2,offset+(18*(patrick.y-1))+2,2,2)
+    spr(1,(18*(patrick.x-1))+2,offset+(18*(patrick.y-1))+2,2,2)
     palt()
     if play_mode==play_modes.infinite then
-      print("level"..(kill and "-" or " ")..run+1,1,88,7)
+      print("level".." "..run+1,1,88,7)
     else
-      print("level"..(kill and "-" or " ")..level_number,1,88,7)
+      print("level".." "..level_number,1,88,7)
     end
     if play_mode==play_modes.challenge then
       print("steps "..steps,40,88,7)
@@ -761,7 +767,7 @@ function _draw()
     print("lose -"..60+steps,1,106,8)
     oh_no()
   elseif mode==modes.story then
-    if (kill) cls(5) else cls()
+    cls()
     story={
       "it is the year 2077.",
       "",
@@ -807,41 +813,24 @@ function _draw()
       "are you ready for the challenge?",
     }
     local scroll_offset=0
-    if kill then
-      cursor(0,story_scroll)
-    else
-      spr(39,56,12*6+story_scroll,2,2)
-      palt(0,false)
-      palt(6,true)
-      spr(story_scroll<-50 and 1 or 3,56,24*6+story_scroll,2,2)
-      palt()
-      local ball_x=40
-      for ball in all(balls) do
-        if ball.id!=1 then
-          circfill(ball_x,38*6+story_scroll,4,ball.color)
-          ball_x+=10
-        end
+    spr(39,56,12*6+story_scroll,2,2)
+    palt(0,false)
+    palt(6,true)
+    spr(story_scroll<-50 and 1 or 3,56,24*6+story_scroll,2,2)
+    palt()
+    local ball_x=40
+    for ball in all(balls) do
+      if ball.id!=1 then
+        circfill(ball_x,38*6+story_scroll,4,ball.color)
+        ball_x+=10
       end
-      if (story_scroll<-300) local str="press "..buttons.x print(str,64-(#str*2),64,7)
     end
+    if (story_scroll<-300) local str="press "..buttons.x print(str,64-(#str*2),64,7)
     for str in all(story) do
       if (scroll_offset==6*10) color(8) else color(7)
-      if not kill then
-        print(str,64-(#str*2),story_scroll+scroll_offset)
-        local x,y=flr(rnd(127)),flr(rnd(127))
-        line(x,y,x-3,y-3,7)
-      else
-        if (story_scroll<-300) cls=kls
-        if (str!="") center(str)
-        palt(0,false)
-        palt(6,true)
-        spr(41,story_scroll+427,40,2,2)
-        spr(43,story_scroll+427,40+16,2,1)
-        spr(story_scroll%12!=0 and 59 or 45,story_scroll+427,40+24)
-        spr(story_scroll%10!=0 and 60 or 61,story_scroll+427+8,40+24)
-        palt()
-        if (story_scroll==-364) spr(36,54,25,3,2,true) print("where\nam i?",56,26,0)
-      end
+      print(str,64-(#str*2),story_scroll+scroll_offset)
+      local x,y=flr(rnd(127)),flr(rnd(127))
+      line(x,y,x-3,y-3,7)
       scroll_offset+=6
     end
   elseif mode==modes.custom then
@@ -1015,7 +1004,7 @@ function _draw()
     end
   elseif mode==modes.custom_list then
     cls()
-    for i=(custom_page*20)+1,min((custom_page*20)+20,50) do
+    for i=(custom_page*custom_page_size)+1,min((custom_page*custom_page_size)+custom_page_size,50) do
       local code=""
       if i<=#custom_levels+1 then
         if custom_list_selected==i then
@@ -1029,11 +1018,11 @@ function _draw()
       else
         color(5)
       end
-      print((custom_list_selected==i and ">" or "")..i.." "..(i==#custom_levels+1 and stat(95)%2==0 and "_" or "")..(i<10 and " " or "")..code)
+      print((custom_list_selected==i and ">" or " ")..i.." "..(i==#custom_levels+1 and stat(95)%2==0 and "_" or "")..(i<10 and " " or "")..code)
     end
 
     if (custom_page>0) print("\148",120,0,7)
-    if ((custom_page*20)+20<#custom_levels) print("\131",120,114,7)
+    if ((custom_page*custom_page_size)+custom_page_size<#custom_levels) print("\131",120,114,7)
 
     print(buttons.x,113,60,7)
     if custom_levels[custom_list_selected] then
@@ -1041,11 +1030,37 @@ function _draw()
     else
       print("create",105,66,7)
     end
+  elseif mode==modes.challenge_list then
+    cls()
+    for i=(challenge_page*challenge_page_size)+1,min((challenge_page*challenge_page_size)+challenge_page_size,#preset_levels) do
+      local y=(((i-1)%challenge_page_size)*8)+8
+      outline("\146",14,y,levels[i].status>0 and 11 or 7,levels[i].status>0 and 9 or 0)
+      for j=1,2 do
+        outline("\146",24+((j-1)*10),y,levels[i].status>=j+1 and 11 or 7,levels[i].status>=j+1 and 9 or 0)
+      end
+
+      local code=""
+      if i<=#preset_levels+1 then
+        if challenge_list_selected==i then
+          color(14)
+        else
+          if (i<=#preset_levels) color(10) else color(6)
+        end
+        for j in all(preset_levels[i]) do
+          code=code.." "..(j<10 and " " or "")..j
+        end
+      else
+        color(5)
+      end
+      cursor(0,y+1)
+      print((challenge_list_selected==i and ">" or " ")..i.."        "..(i<10 and " " or "")..code)
+    end
+
+    if (challenge_page>0) print("\148",120,0,7)
+    if ((challenge_page*challenge_page_size)+challenge_page_size<#preset_levels) print("\131",120,114,7)
   end
   if page==12 and run==0 then
     print("good\nluck",50,94,11)
-  elseif kill and run==130 then
-    print(" kill\nscreen",44,94,8)
   end
 end
 
@@ -1175,20 +1190,34 @@ end
 function save_progress()
   local addr=0x5eeb
   local byte=0
+  local won=0
   for i=1,#preset_levels do
+    if (preset_levels[i].status > 0) won += 1
     byte=bor(byte,preset_levels[i].status)
+    if (i%4==0 or i==#preset_levels) poke(addr,byte) addr+=1 byte=0
     byte=rotl(byte,2)
-    if (i%3==0) poke(addr,byte) addr+=1 byte=0
+  end
+  if won == #preset_levels then
+    add(main_menu,{function()
+      mode=modes.ending
+    end, "ending"})
   end
 end
 
 function load_progress()
   local addr=0x5eeb
   local byte=peek(addr)
-  for i=1,40 do
+  local won=0
+  for i=1,#preset_levels do
     preset_levels[i].status=rotr(band(byte,0b11000000),6)
+    if (preset_levels[i].status > 0) won += 1
     byte=rotl(byte,2)
     if (i%4==0) addr+=1 byte=peek(addr)
+  end
+  if won == #preset_levels then
+    add(main_menu,{function()
+      mode=modes.ending
+    end, "ending"})
   end
 end
 
@@ -1292,7 +1321,6 @@ function load_custom()
   assert(queue_length==0 or ball_queue==0)
   return levels
 end
-
 -->8
 -- reldni levels
 -- http://web.archive.org/web/20020127141411fw_/http://www.reldni.com:80/archive/patrick2.html
@@ -1346,8 +1374,52 @@ preset_levels={
 }
 
 stars={
+  {22,19},
+  {20,17},
+  {22,19},
+  {25,23},
+  {24,21},
+  {24,20},
+  {21,15},
+  {23,21},
+  {24,22},
+  {23,18},
+  {24,22},
+  {24,21},
+  {25,23},
+  {24,21},
+  {23,20},
+  {25,23},
+  {25,22},
+  {24,22},
   {23,19},
-  {21,16}
+  {24,21},
+  {24,20},
+  {23,18},
+  {25,23},
+  {23,19},
+  {24,21},
+  {23,18},
+  {23,19},
+  {24,20},
+  {24,22},
+  {23,19},
+  {24,21},
+  {22,17},
+  {23,18},
+  {25,23},
+  {25,23},
+  {23,19},
+  {24,23},
+  {24,22},
+  {25,23},
+  {24,19},
+  {25,23},
+  {24,22},
+  {23,19},
+  {25,20},
+  {24,21},
+  {23,21},
 }
 __gfx__
 0000000066666555555666666666633333366666eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee000eeeeeeeeeeeee00000999900
