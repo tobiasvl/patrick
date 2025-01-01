@@ -91,7 +91,8 @@ function _init()
       init_board(true,true)
       mode=modes.custom_list
       music(-1)
-    end, "edit custom"}
+    end, "edit custom"},
+    x=45
   }
   play_menu={
     {function()
@@ -108,6 +109,7 @@ function _init()
       mode=modes.play
       music(-1)
     end, "infinite mode"},
+    x=35
   }
 
   menu=main_menu
@@ -146,14 +148,18 @@ function _update()
     local x,y=stat(32),stat(33)
     if x!=old_x or y!=old_y or mouse then
       old_x,old_y=x,y
-      if x>=35 and x<=69 and y>=45 and y<=49 then
-        menu_selection=1
-      elseif x>=35 and x<=85 and y>=50 and y<=54 then
-        menu_selection=2
-      elseif x>=35 and x<=73 and y>=55 and y<=59 then
-        menu_selection=3
-      elseif x>=35 and x<=77 and y>=60 and y<=64 then
-        menu_selection=4
+      if x>=menu.x and x<=90 then
+        if y>=45 and y<=49 then
+          menu_selection=1
+        elseif y>=50 and y<=55 then
+          menu_selection=2
+        elseif y>=56 and y<=61 then
+          menu_selection=3
+        elseif #menu>=4 and y>=62 and y<=67 then
+          menu_selection=4
+        elseif #menu>=5 and y>=68 and y<=73 then
+          menu_selection=5
+        end
       end
     end
     if mouse then
@@ -458,7 +464,7 @@ function _draw()
     outline("cyberpunk",0,9,3,11,true)
     outline("challenge",0,16,8,0,true)
 
-    cursor(35,45)
+    cursor(menu.x,45)
     for i=1,#menu do
       color(menu_selection==i and 10 or 14)
       if (menu_selection==i) then
@@ -470,7 +476,8 @@ function _draw()
     cursor(0,73)
 
     if menu==main_menu then
-      if (flr(time())%2==0) center("\npress "..buttons.x,6)
+      print("")
+      if (flr(time())%2==0) center("press "..buttons.x,6)
     else
       color()
       if menu_selection==2 then
