@@ -36,14 +36,9 @@ balls={
 }
 
 function _init()
-  n=15
-  w=127
-  t=0
-  mode=modes.title_screen
-  menu_selection=1
-  score=0
-  run=0
-  last_mouse,last_x,last_y=0,0,0
+  n,w,t=15,127,0
+  mode,menu_selection,challenge_list_selected,challenge_page_size=modes.title_screen,1,1,13
+  score,run,last_mouse,last_x,last_y,mouse_pointer,fred,story_scroll=0,0,0,0,0,0,0,127
   cartdata("tobiasvl_patrick")
   --high_reldni=dget(0)
   high_score=dget(1)
@@ -51,27 +46,28 @@ function _init()
   --high_custom=dget(3)
   poke(0x5f2d,1)
   emulated=stat(102)!=0
-  keyboard=stat(102)!=0 and stat(102)!="www.lexaloffle.com" and stat(102)!="www.playpico.com"
+  keyboard=emulated and stat(102)!="www.lexaloffle.com"
   buttons={o=keyboard and "z" or "🅾️",x=keyboard and "x" or "❎"}
-  story_scroll=127
-  mouse_pointer=0
-  fred=0
+  xmas=stat(91)==12 or (stat(91)==1 and stat(92)<13)
   music(0)
 
-  custom_score=0
+  custom_score,custom_list_selected,custom_page_size=0,1,20
   custom_levels=load_custom()
-  custom_list_selected=1
-  custom_page_size=20
   custom_page=flr(custom_list_selected/custom_page_size)
 
-  challenge_list_selected=1
-  challenge_page_size=13
   challenge_page=flr(challenge_list_selected/challenge_page_size)
 
   load_progress()
 
   levels={}
   level_number=0
+
+  if xmas then
+    particles = {}
+    for _=1,32 do
+      add(particles,{x=rnd(128),y=rnd(256),z=rnd(3)})
+    end
+  end
 
   main_menu={
     {function()
@@ -131,6 +127,13 @@ function _update()
   last_mouse=temp_mouse
   if mode==modes.title_screen then
     menuitem(1)
+
+    --xmas
+    for p in all(particles) do
+      p.y+=1.2 * (p.z+1) / 3
+      if (p.y >= 128 + 64) p.y -= 256
+      if (p.y <= -64) p.y += 256
+    end
 
     play_menu[3]=#custom_levels>0 and {function()
       levels=custom_levels
@@ -459,10 +462,14 @@ function _draw()
     if (fred==2) print("fred\nwho?",15,3)
     if (fred==3) print("freddie\nfinkle?",15,3)
     if (fred==4) print("that\nbastard",15,3)
-
+    
     outline("patrick's",0,2,11,7,true)
-    outline("cyberpunk",0,9,3,11,true)
-    outline("challenge",0,16,8,0,true)
+    if not xmas then
+      outline("cyberpunk",0,9,3,11,true)
+    else
+      outline("christmas",0,9,7,8,true)
+    end
+    outline("challenge",0,16,xmas and 3 or 8,xmas and 11 or 0,true)
 
     cursor(menu.x,45)
     for i=1,#menu do
@@ -526,6 +533,11 @@ function _draw()
     else
       if (not emulated) spr(16,x,y)
     end
+
+    --xmas
+    for p in all(particles) do
+      circfill(p.x,p.y-64,p.z,6)
+    end
   elseif mode==modes.tutorial then
     cls()
     local s=buttons.x..": next"
@@ -546,7 +558,7 @@ function _draw()
     end
     palt(0,false)
     palt(6,true)
-    spr(1,(18*(patrick.x-1))+2,offset+(18*(patrick.y-1))+2,2,2)
+    spr(xmas and 72 or 1,(18*(patrick.x-1))+2,offset+(18*(patrick.y-1))+2,2,2)
     palt()
     rectfill(0,83,127,127,0)
     cursor(0,88)
@@ -716,7 +728,7 @@ function _draw()
     end
     palt(0,false)
     palt(6,true)
-    spr(1,(18*(patrick.x-1))+2,offset+(18*(patrick.y-1))+2,2,2)
+    spr(xmas and 72 or 1,(18*(patrick.x-1))+2,offset+(18*(patrick.y-1))+2,2,2)
     palt()
     if play_mode==play_modes.infinite then
       print("level".." "..run+1,1,88,7)
@@ -783,69 +795,112 @@ function _draw()
     oh_no()
   elseif mode==modes.story then
     cls()
-    story={
-      "it is the year 2077.",
-      "",
-      "the evil ernie york, former",
-      "electronic store owner and",
-      "cryogenics innovator, now",
-      "mutated multibillionaire ceo of",
-      "the sinister zebra corporation,",
-      "rules fun land with his army of",
-      "advanced robots - beings dis-",
-      "similar to humans - known as",
-      "tomb bots",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "the immortal spirit of the",
-      "leprechaun patrick magee - now",
-      "clad in sunglasses and a black",
-      "coat - is the last vestige of",
-      "the jackie gleason appreciation",
-      "society, an ancient underground",
-      "rebel alliance.",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "now patrick must traverse and",
-      "dismantle the mazes of szc's",
-      "virtual reality system to shut",
-      "down the tomb bot factories.",
-      "hindering his quest are digital",
-      "versions of the szc's neon",
-      "\"shine 'n glow\" energy balls;",
-      "but perhaps they can help too?",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "are you ready for the challenge?",
-    }
+    if xmas then
+      story={
+        "the sinister zebra committee has",
+        "stolen all of santa's xmas",
+        "gifts, and their evil leader",
+        "ernie york has made a weather",
+        "machine that creates eternal",
+        "snow! winter forever, but no",
+        "christmas. a nightmare!!",
+        "",
+        "the immortal spirit of the",
+        "leprechaun patrick magee has",
+        "been recruited as an xmas elf",
+        "to retrieve the presents.",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "now patrick must traverse",
+        "the mazes of the szc.",
+        "hindering his quest are magical",
+        "\"shine 'n glow\" xmas ornaments;",
+        "but perhaps they can help too?",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "are you ready for the challenge?",
+      }
+    else
+      story={
+        "it is the year 2077.",
+        "",
+        "the evil ernie york, former",
+        "electronic store owner and",
+        "cryogenics innovator, now",
+        "mutated multibillionaire ceo of",
+        "the sinister zebra corporation,",
+        "rules fun land with his army of",
+        "advanced robots - beings dis-",
+        "similar to humans - known as",
+        "tomb bots",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "the immortal spirit of the",
+        "leprechaun patrick magee - now",
+        "clad in sunglasses and a black",
+        "coat - is the last vestige of",
+        "the jackie gleason appreciation",
+        "society, an ancient underground",
+        "rebel alliance.",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "now patrick must traverse and",
+        "dismantle the mazes of szc's",
+        "virtual reality system to shut",
+        "down the tomb bot factories.",
+        "hindering his quest are digital",
+        "versions of the szc's neon",
+        "\"shine 'n glow\" energy balls;",
+        "but perhaps they can help too?",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "are you ready for the challenge?",
+      }
+    end
     local scroll_offset=0
-    spr(39,56,12*6+story_scroll,2,2)
-    palt(0,false)
-    palt(6,true)
-    spr(story_scroll<-50 and 1 or 3,56,24*6+story_scroll,2,2)
+    if not xmas then
+      spr(39,56,12*6+story_scroll,2,2)
+      palt(0,false)
+      palt(6,true)
+      spr(story_scroll<-50 and 1 or 3,56,24*6+story_scroll,2,2)
+    else
+      palt(0,false)
+      palt(6,true)
+      spr(72,56,13*6+story_scroll,2,2)
+    end
     palt()
     local ball_x=40
     for ball in all(balls) do
       if ball.id!=1 then
-        circfill(ball_x,38*6+story_scroll,4,ball.color)
+        circfill(ball_x,(xmas and 24 or 38)*6+story_scroll,4,ball.color)
         ball_x+=10
       end
     end
-    if (story_scroll<-300) local str="press "..buttons.x print(str,64-(#str*2),64,7)
+    if (xmas and story_scroll<-170 or story_scroll<-300) local str="press "..buttons.x print(str,64-(#str*2),64,7)
     for str in all(story) do
-      if (scroll_offset==6*10) color(8) else color(7)
+      if (not xmas and scroll_offset==6*10) color(8) else color(7)
       print(str,64-(#str*2),story_scroll+scroll_offset)
       local x,y=flr(rnd(127)),flr(rnd(127))
-      line(x,y,x-3,y-3,7)
+      if xmas then
+        circfill(x,y,rnd(3),7)
+      else
+        line(x,y,x-3,y-3,7)
+      end
       scroll_offset+=6
     end
   elseif mode==modes.custom then
@@ -868,11 +923,11 @@ function _draw()
     palt(0,false)
     palt(6,true)
     if mouse_pointer==1 then
-      spr(1,stat(32),stat(33),2,2)
+      spr(xmas and 72 or 1,stat(32),stat(33),2,2)
     elseif patrick.x==-1 then
-      spr(1,0,94,2,2)
+      spr(xmas and 72 or 1,0,94,2,2)
     else
-      spr(1,(18*(patrick.x-1))+2,offset+(18*(patrick.y-1))+2,2,2)
+      spr(xmas and 72 or 1,(18*(patrick.x-1))+2,offset+(18*(patrick.y-1))+2,2,2)
     end
     palt()
     local x,y=20,98
@@ -986,27 +1041,19 @@ function _draw()
     end
     local story={
       "patrick has made it.",
+      "he has recovered all",
+      "the presents.",
       "",
       "",
-      "he has hacked the sinister zebra",
-      "corporation's virtual reality",
-      "system, and gained access to",
-      "their mainframe.",
-      "",
-      "",
-      "as the tomb bot factories shut",
-      "down all over fun land, ernie",
-      "york's electronic weather",
-      "systems also lose power, and",
-      "the rain finally ends after",
-      "several decades.",
+      "christmas is saved.",
+      "spring comes.",
       "",
       "",
       "unbeknown to patrick, deep in",
       "the underworld, underneath the",
       "fabled vinnie's tomb, one of",
       "ernie york's cryogenics chambers",
-      "also shuts down..."
+      "also thaws..."
     }
     local scroll_offset=0
     for str in all(story) do
@@ -1097,6 +1144,11 @@ function all_right()
   elseif patrick.x==7 then
     offset,flip=14,true
   end
+  if xmas then
+    local x,y=(18*(patrick.x-1))+2,10+(18*(patrick.y-1))+2
+    rectfill(x,y,x+15,y+15,0)
+    spr(68,x,y,2,2)
+  end
   spr(36,(18*(patrick.x-2))+offset,10+(18*(patrick.y-2))+9,3,2,flip)
   print(" all\nright",(18*(patrick.x-2))+2+offset,10+(18*(patrick.y-2))+10,0)
 end
@@ -1104,6 +1156,11 @@ end
 function oh_no()
   local offset,flip=9,false
   if (patrick.x==1) offset,flip=32,true
+  if xmas then
+    local x,y=(18*(patrick.x-1))+2,10+(18*(patrick.y-1))+2
+    rectfill(x,y,x+15,y+15,0)
+    spr(70,x,y,2,2)
+  end
   spr(34,(18*(patrick.x-2))+offset,10+(18*(patrick.y-2))+9,2,2,flip)
   print("oh\nno",(18*(patrick.x-2))+4+offset,10+(18*(patrick.y-2))+10,0)
 end
@@ -1340,52 +1397,52 @@ end
 -- reldni levels
 -- http://web.archive.org/web/20020127141411fw_/http://www.reldni.com:80/archive/patrick2.html
 preset_levels={
-  {27,7,25,6,26,1,15},
-  {14,11,5,16,11,6,13},
-  {12,27,24,1,10,18,13},
-  {20,23,21,28,1,9,21},
-  {12,15,13,19,21,1,13},
-  {28,14,8,19,14,9,16},
-  {8,17,19,20,16,1,10},
-  {6,19,13,24,18,13,21},
-  {20,11,11,4,25,11,23},
-  {1,11,9,23,20,18,6},
-  {27,14,8,19,14,9,16},
-  {19,22,20,27,28,8,20},
-  {2,27,21,4,27,22,1},
-  {13,16,14,20,22,2,14},
-  {20,18,12,23,17,12,20},
-  {25,28,26,5,6,14,26},
-  {5,11,11,4,25,11,23},
-  {27,10,7,1,18,23,23},
-  {4,12,2,11,4,6,20},
-  {28,7,25,7,27,1,15},
-  {18,25,4,17,14,8,19},
-  {3,11,5,16,11,6,13},
-  {4,20,16,10,0,0,6},
-  {27,8,9,11,6,20,28},
-  {5,16,19,23,17,6,11},
-  {9,8,17,19,21,16,2},
-  {13,20,19,9,17,2,2},
-  {20,19,16,26,24,8,20},
-  {6,15,17,18,14,27,7},
-  {27,20,25,10,23,24,0}, -- ?
-  {10,9,5,15,14,26,10},
-  {6,10,11,16,1,26,14},
-  {27,17,20,3,7,1,18},
-  {10,20,17,12,1,5,6},
-  {11,19,9,18,11,13,27},
-  {4,18,24,21,3,1,13},
-  {27,10,7,1,18,23,23},
-  {12,20,10,19,12,14,28},
-  {18,4,26,9,4,27,7},
-  {10,20,17,11,1,5,6},
-  {27,14,8,19,14,9,16},
-  {14,22,12,21,13,16,2},
-  {16,4,26,9,4,27,7},
-  {12,0,0,11,0,19,13},
-  {24,2,13,20,13,6,21},
-  {8,21,15,26,21,16,23},
+  split"27,7,25,6,26,1,15",
+  split"14,11,5,16,11,6,13",
+  split"12,27,24,1,10,18,13",
+  split"20,23,21,28,1,9,21",
+  split"12,15,13,19,21,1,13",
+  split"28,14,8,19,14,9,16",
+  split"8,17,19,20,16,1,10",
+  split"6,19,13,24,18,13,21",
+  split"20,11,11,4,25,11,23",
+  split"1,11,9,23,20,18,6",
+  split"27,14,8,19,14,9,16",
+  split"19,22,20,27,28,8,20",
+  split"2,27,21,4,27,22,1",
+  split"13,16,14,20,22,2,14",
+  split"20,18,12,23,17,12,20",
+  split"25,28,26,5,6,14,26",
+  split"5,11,11,4,25,11,23",
+  split"27,10,7,1,18,23,23",
+  split"4,12,2,11,4,6,20",
+  split"28,7,25,7,27,1,15",
+  split"18,25,4,17,14,8,19",
+  split"3,11,5,16,11,6,13",
+  split"4,20,16,10,0,0,6",
+  split"27,8,9,11,6,20,28",
+  split"5,16,19,23,17,6,11",
+  split"9,8,17,19,21,16,2",
+  split"13,20,19,9,17,2,2",
+  split"20,19,16,26,24,8,20",
+  split"6,15,17,18,14,27,7",
+  split"27,20,25,10,23,24,0", -- ?
+  split"10,9,5,15,14,26,10",
+  split"6,10,11,16,1,26,14",
+  split"27,17,20,3,7,1,18",
+  split"10,20,17,12,1,5,6",
+  split"11,19,9,18,11,13,27",
+  split"4,18,24,21,3,1,13",
+  split"27,10,7,1,18,23,23",
+  split"12,20,10,19,12,14,28",
+  split"18,4,26,9,4,27,7",
+  split"10,20,17,11,1,5,6",
+  split"27,14,8,19,14,9,16",
+  split"14,22,12,21,13,16,2",
+  split"16,4,26,9,4,27,7",
+  split"12,0,0,11,0,19,13",
+  split"24,2,13,20,13,6,21",
+  split"8,21,15,26,21,16,23",
 }
 
 stars={
@@ -1469,22 +1526,22 @@ eeeeeeeeeeeee00007777777777777700777777777777777777777700007788118877000666aaaa0
 000000000000000000000000007770000000000000000000000777000000111111110000666aaaaaaaaaaa666666677766777666666666666336333333336336
 0000000000000000000000000007700000000000000000000007700000008800008800006666aaa888aaa6666666888866888866666666666666336666336666
 000000000000000000000000000077000000000000000000007700000008880000888000666666aaaaaa66666666888866888866666666666666336666336666
-66666666666666666666668888666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-6866888888886666666668c00c866666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-8668888888888666666668cccc866666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-86880008800088666666668888666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-8688a0a88a0a88666666666886666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-86880008800088666666668888666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-86888888888888666668888888888666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-86888000000888666888888888888886000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-886888cccc8886668888888888888888000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-888688c88c8866668888888888888888000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-888888c88c8888668888888008888888000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-88888888888888866888880000888886000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-6888888888888886668888a00a888866000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-6688888888888886666888a88a888666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-6688888668888866666886a66a688666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-66888866668888666688886666888866000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+66666666666666666666668888666666666666888866666666666688886666666666668888666666000000000000000000000000000000000000000000000000
+6866888888886666666668c00c866666666688888888666666668888888866666666888888886666000000000000000000000000000000000000000000000000
+8668888888888666666668cccc866666663333333333336666333333333333666633333333333366000000000000000000000000000000000000000000000000
+86880008800088666666668888666666666444444444466666644444444446666664444444444666000000000000000000000000000000000000000000000000
+8688a0a88a0a886666666668866666666644aaaaaaaaa4666644aaaaaaaaa4666644aaaaaaaaa466000000000000000000000000000000000000000000000000
+8688000880008866666666888866666666aa0aaaaaa0aa6666aaaaaaaaaaaa6666aaccaaaaccaa66000000000000000000000000000000000000000000000000
+8688888888888866666888888888866666a0a0a0aa0a0a6666aa00a0aa00aa6666aac0a0aac0aa66000000000000000000000000000000000000000000000000
+8688800000088866688888888888888666aaaaa0aaaaaa6666aacaa0aaacaa6666aaaaa0aaaaaa66000000000000000000000000000000000000000000000000
+886888cccc888666888888888888888866aaaaa00aaaa66666aacaa00aaca66666aaaaa00aaaa666000000000000000000000000000000000000000000000000
+888688c88c8866668888888888888888666aaeeeeeeaa666666aaaeeeeaaa666666aaeaaaaeaa666000000000000000000000000000000000000000000000000
+888888c88c88886688888880088888886336aaeeeeaa63366666aeaaaaea66666666aaeeeeaa6666000000000000000000000000000000000000000000000000
+88888888888888866888880000888886633663333366633666666333336666666666633333666666000000000000000000000000000000000000000000000000
+6888888888888886668888a00a888866663333333333336666633333333336666633333333333366000000000000000000000000000000000000000000000000
+6688888888888886666888a88a8886666666000aa00066666633000aa00033666336000aa0006336000000000000000000000000000000000000000000000000
+6688888668888866666886a66a688666666688888888666666338888888833666336888888886336000000000000000000000000000000000000000000000000
+66888866668888666688886666888866666688666688666666668866668866666666886666886666000000000000000000000000000000000000000000000000
 __label__
 77700000aaa00000ccc0ccc0000011100000bb00bb00000088008880000099009990000000000000000000000000000000000000000000000000000000000000
 0070000000a0000000c0c0c00000100000000b000b00000008000080000009009000000000000000000000000000000000000000000000000000000000000000
