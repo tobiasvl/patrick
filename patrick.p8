@@ -121,13 +121,12 @@ end
 -->8
 -- _update()
 function _update()
+  menuitem(1)
   local mouse=stat(34)==1
   local temp_mouse=mouse
   mouse=mouse!=last_mouse and mouse or false
   last_mouse=temp_mouse
   if mode==modes.title_screen then
-    menuitem(1)
-
     --xmas
     for p in all(particles) do
       p.y+=1.2 * (p.z+1) / 3
@@ -185,12 +184,13 @@ function _update()
   elseif mode==modes.play then
     local button=btnp()
     if play_mode==play_modes.infinite then
-      menuitem(1,"custom levels",function() mode=modes.custom_list music(0) end)
+      menuitem(1,"title screen",function() mode=modes.title_screen music(0) end)
       if (button==0x10 and destroyed==0) init_board(false,false,levels[level_number])
+    elseif play_mode==play_modes.custom then
+      menuitem(1,"edit custom",function() mode=modes.custom_list music(0) end)
     else
       menuitem(1,"level select",function() mode=modes.challenge_list music(0) end)
     end
-    menuitem(2,"title screen",function() mode=modes.title_screen music(0) end)
     if destroyed==27 then
       sfx(25)
       if play_mode==play_modes.challenge then
@@ -333,7 +333,6 @@ function _update()
       end
     end
   elseif mode==modes.story then
-    menuitem(1,"title screen",function() mode=modes.title_screen music(0) end)
     if btn(2) then
       story_scroll-=1
     elseif btn(3) then
@@ -344,7 +343,6 @@ function _update()
       story_scroll-=0.2
     end
   elseif mode==modes.custom then
-    menuitem(1,"title screen",function() mode=modes.title_screen music(0) end)
     if patrick.x>0 and btnp(5) then
       if not custom_levels[custom_list_selected] then
         custom_levels[custom_list_selected]={}
@@ -438,7 +436,6 @@ function _update()
       mode=modes.play
     end
   elseif mode==modes.ending then
-    menuitem(1,"title screen",function() mode=modes.title_screen music(0) end)
     if btn(2) then
       story_scroll-=1
     elseif btn(3) then
