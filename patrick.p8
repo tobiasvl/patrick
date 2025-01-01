@@ -733,21 +733,22 @@ function _draw()
     else
       print("level".." "..level_number,1,88,7)
     end
-    if play_mode==play_modes.challenge then
-      print("steps "..steps,40,88,7)
-      outline("\146",40,95,levels[level_number].status>0 and 11 or 7,9)
-      local x=50
-      for i=1,2 do
-        outline("\146",x,95,levels[level_number].status>=i+1 and 11 or 7,steps<=stars[level_number][i] and 9 or 0)
-        x+=10
-      end
-    else
+    if play_mode!=play_modes.challenge then
       print("score "..score,1,94,7)
       print("win  +"..60-steps,1,100,5)
       print("lose -"..60+steps,1,106,5)
     end
     print_legend()
     if (not emulated) spr(16,stat(32),stat(33))
+  end
+  if (mode==modes.play or mode==modes.win) and play_mode==play_modes.challenge then
+    print("steps "..steps,40,88,7)
+    outline("\146",40,95,levels[level_number].status>0 and 11 or 7,9)
+    local x=50
+    for i=1,2 do
+      outline("\146",x,95,levels[level_number].status>=i+1 and 11 or 7,steps<=stars[level_number][i] and 9 or 0)
+      x+=10
+    end
   end
   if mode==modes.win then
     local s=buttons.x..": next"
@@ -756,12 +757,6 @@ function _draw()
       print("score "..score,1,94,5)
       print("win  +"..60-steps,1,100,11)
       print("score="..score+(60-steps),1,114,7)
-    else
-      local x=40
-      for i=1,3 do
-        outline("\146",x,95,levels[level_number].status>=i and 11 or 7,levels[level_number].status>=i and 9 or 0)
-        x+=10
-      end
     end
     all_right()
   elseif mode==modes.game_over then
@@ -1205,14 +1200,14 @@ function outline(s,x,y,c1,c2,center)
  if center then
   x=64-(#s*2)
  end
-	for i=0,2 do
-	 for j=0,2 do
-	  if not(i==1 and j==1) then
-	   print(s,x+i,y+j,c1)
-	  end
-	 end
-	end
-	print(s,x+1,y+1,c2)
+ for i=0,2 do
+  for j=0,2 do
+   if not(i==1 and j==1) then
+    print(s,x+i,y+j,c1)
+   end
+  end
+ end
+ print(s,x+1,y+1,c2)
 end
 
 -->8
