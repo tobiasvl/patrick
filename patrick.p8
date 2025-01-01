@@ -1,5 +1,5 @@
 pico-8 cartridge // http://www.pico-8.com
-version 18
+version 42
 __lua__
 -- patrick's cyberpunk challenge
 -- by tobiasvl
@@ -45,10 +45,10 @@ function _init()
   run=0
   last_mouse,last_x,last_y=0,0,0
   cartdata("tobiasvl_patrick")
-  high_reldni=dget(0)
+  --high_reldni=dget(0)
   high_score=dget(1)
   high_run=dget(2)
-  high_custom=dget(3)
+  --high_custom=dget(3)
   poke(0x5f2d,1)
   emulated=stat(102)!=0
   keyboard=stat(102)!=0 and stat(102)!="www.lexaloffle.com" and stat(102)!="www.playpico.com"
@@ -480,11 +480,19 @@ function _draw()
       if (flr(time())%2==0) center("press "..buttons.x,6)
     else
       color()
-      if menu_selection==2 then
+      if menu_selection==1 then
+        local won,stars=0,0
+        for i=1,#preset_levels do
+          if (preset_levels[i].status > 0) then
+            won += 1
+            stars += preset_levels[i].status
+          end
+        end
+        center("beat: "..won.." / "..#preset_levels,7)
+        center("★: "..stars.." / "..#preset_levels*3,7)
+      elseif menu_selection==2 then
         center("high score: "..high_score,7)
         center("(run: "..high_run.." levels)",7)
-      else
-        center("high score: "..(menu_selection==2 and high_reldni or high_custom),7)
       end
     end
 
@@ -1714,3 +1722,4 @@ __music__
 00 3b3c3d44
 00 3b3e3d44
 02 3b3f3d44
+
