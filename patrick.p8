@@ -728,6 +728,7 @@ function _draw()
     spr(xmas and 72 or 1,(18*(patrick.x-1))+2,offset+(18*(patrick.y-1))+2,2,2)
     palt()
     if play_mode==play_modes.infinite then
+      if (run==0) print("good\nluck",50,94,11)
       print("level".." "..run+1,1,88,7)
     else
       print("level".." "..level_number,1,88,7)
@@ -1117,9 +1118,6 @@ function _draw()
 
     if (challenge_page>0) print("\148",120,0,7)
     if ((challenge_page*challenge_page_size)+challenge_page_size<#preset_levels) print("\131",120,114,7)
-  end
-  if page==12 and run==0 then
-    print("good\nluck",50,94,11)
   end
 end
 
