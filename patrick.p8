@@ -134,6 +134,16 @@ function _update()
       if (p.y <= -64) p.y += 256
     end
 
+    local won=0
+    for i=1,#preset_levels do
+      if (preset_levels[i].status > 0) won += 1
+    end
+    if won==#levels or fred>=4 then
+      main_menu[5] = {function()
+        mode=modes.ending
+      end, "ending"}
+    end
+
     play_menu[3]=#custom_levels>0 and {function()
       levels=custom_levels
       level_number=1
@@ -168,10 +178,6 @@ function _update()
       if x>=15 and x<=20 and y>=3 and y<=10 then
         fred+=1
         if fred==4 then
-          add(main_menu,{function()
-            story_scroll=127
-            mode=modes.ending
-          end, "ending"})
           for i=1,#preset_levels do
             preset_levels[i].status=3
           end
@@ -1257,11 +1263,6 @@ function save_progress()
     if (i%4==0 or i==#preset_levels) poke(addr,byte) addr+=1 byte=0
     byte=rotl(byte,2)
   end
-  if won == #preset_levels then
-    add(main_menu,{function()
-      mode=modes.ending
-    end, "ending"})
-  end
 end
 
 function load_progress()
@@ -1273,11 +1274,6 @@ function load_progress()
     if (preset_levels[i].status > 0) won += 1
     byte=rotl(byte,2)
     if (i%4==0) addr+=1 byte=peek(addr)
-  end
-  if won == #preset_levels then
-    add(main_menu,{function()
-      mode=modes.ending
-    end, "ending"})
   end
 end
 
