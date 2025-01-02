@@ -1214,10 +1214,8 @@ end
 -- init_board
 function init_board(skip_balls,skip_patrick,level)
   if not level then
-    if not skip_balls then
-      for ball in all(balls) do
-        ball.pos=flr(rnd(28))+1
-      end
+    for ball in all(balls) do
+      ball.pos=skip_balls and 0 or flr(rnd(28))+1
     end
     if (not skip_patrick) balls[1].pos=flr(rnd(28))+1 else patrick={x=-1,y=-1}
   else
